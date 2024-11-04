@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package kit.query.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/crypto-zero/go-kit/proto/kit/query/v1;query";
+
+// TimeRange is a range of time.
+message TimeRange {
+  // begin is the beginning of the range.
+  google.protobuf.Timestamp begin = 1;
+  // end is the end of the range.
+  google.protobuf.Timestamp end = 2;
+}

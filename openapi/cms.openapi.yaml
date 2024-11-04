@@ -1,0 +1,46 @@
+info:
+    version: c2c.cms.v1
+paths:
+    /cms/v1/admin/create_platform:
+        post:
+            tags:
+                - CMSPlatformSvc
+                - Admin
+                - Platform
+                - Write
+            operationId: CMSPlatformSvc_CreatePlatform
+    /cms/v1/admin/drop_all_session:
+        post:
+            tags:
+                - CMSSvc
+                - Admin
+                - Common
+            operationId: CMSSvc_AdminDropAllSession
+    /cms/v1/admin/get_platform_key_by_platformId/{platform_id}:
+        get:
+            tags:
+                - CMSPlatformSvc
+                - Admin
+                - PlatformKey
+                - Read
+            operationId: CMSPlatformSvc_GetPlatformKeyByPlatformID
+    /cms/v1/admin/list_platform:
+        get:
+            tags:
+                - CMSPlatformSvc
+                - Admin
+                - Platform
+                - Read
+            operationId: CMSPlatformSvc_ListPlatform
+    /cms/v1/admin_login:
+        post:
+            tags:
+                - CMSSvc
+                - Public
+            operationId: CMSSvc_AdminUserLogin
+    /cms/v1/internal/create_super_admin:
+        post:
+            tags:
+                - CMSSvc
+                - Internal
+            operationId: CMSSvc_CreateSuperAdmin

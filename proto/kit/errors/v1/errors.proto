@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package kit.errors.v1;
+
+import "google/protobuf/any.proto";
+import "google/rpc/error_details.proto";
+
+option go_package = "github.com/crypto-zero/go-kit errors;errors";
+
+message Error {
+  int32 status = 1;
+  string message = 2;
+  google.rpc.ErrorInfo info = 3;
+  repeated google.protobuf.Any details = 4;
+}

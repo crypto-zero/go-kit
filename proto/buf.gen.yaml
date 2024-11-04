@@ -1,0 +1,10 @@
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/go:v1.31.0
+    out: .
+    opt: paths=source_relative
+  - local:
+      - go
+      - run
+      - ../errors/protoc-gen-kit-errors/main.go
+    out: .

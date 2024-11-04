@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package kit.errors.v1;
+
+import "google/protobuf/descriptor.proto";
+
+// fixed go package name cause final we have to copy the generated go code to
+option go_package = "github.com/crypto-zero/go-kit/errors;errors";
+
+// for enum error code declaration
+message EnumErrorDetail {
+  enum Code {
+    // unspecified error code 0
+    CODE_UNSPECIFIED = 0;
+    // bad request status code 400
+    CODE_BAD_REQUEST = 400;
+    // unauthorized status code 401
+    CODE_UNAUTHORIZED = 401;
+    // forbidden status code 403
+    CODE_FORBIDDEN = 403;
+    // not found status code 404
+    CODE_NOT_FOUND = 404;
+    // conflict status code 409
+    CODE_CONFLICT = 409;
+    // precondition failed status code 412
+    CODE_PRECONDITION_FAILED = 412;
+    // range not satisfiable status code 416
+    CODE_RANGE_NOT_SATISFIABLE = 416;
+    // too many requests status code 429
+    CODE_TOO_MANY_REQUESTS = 429;
+    // client closed request status code 499
+    CODE_CLIENT_CLOSED_REQUEST = 499;
+    // internal server error status code 500
+    CODE_INTERNAL_SERVER_ERROR = 500;
+    // service unavailable status code 503
+    CODE_SERVICE_UNAVAILABLE = 503;
+    // gateway timeout status code 504
+    CODE_GATEWAY_TIMEOUT = 504;
+  }
+  string message = 1;
+  Code code = 2;
+}
+
+extend google.protobuf.EnumValueOptions {
+  EnumErrorDetail error_detail = 1276;
+}
+
+// general error codes: 190000 - 199999
+enum GeneralErrorReason {
+  // unspecified error
+  GENERAL_ERROR_REASON_UNSPECIFIED = 0 [(error_detail) = {
+    message: "unspecified error"
+    code: CODE_UNSPECIFIED
+  }];
+  // no permission
+  GENERAL_ERROR_REASON_NO_PERMISSION = 190001 [(error_detail) = {
+    message: "no permission"
+    code: CODE_FORBIDDEN
+  }];
+  // attempt later
+  GENERAL_ERROR_REASON_ATTEMPT_LATER = 190002 [(error_detail) = {
+    message: "attempt later"
+    code: CODE_PRECONDITION_FAILED
+  }];
+  // request not valid
+  GENERAL_ERROR_REASON_REQUEST_NOT_VALID = 190003 [(error_detail) = {
+    message: "request not valid"
+    code: CODE_BAD_REQUEST
+  }];
+}
