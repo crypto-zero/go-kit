@@ -7,25 +7,31 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+const (
+	// secondsOfDay is the number of seconds in a day.
+	secondsOfDay = 86400
+)
+
 // getUnixDays returns the number of days since Unix epoch.
 func getUnixDays(t time.Time) uint32 {
-	return uint32(t.Unix() / 86400)
+	return uint32(t.Unix() / secondsOfDay)
 }
 
-type DailyRotateWriter struct {
+// dailyRotateWriter is a writer that rotates the log file daily.
+type dailyRotateWriter struct {
 	n uint32
 	*lumberjack.Logger
 }
 
-// NewDailyRotateWriter creates a new DailyRotateWriter.
-func NewDailyRotateWriter(logger *lumberjack.Logger) *DailyRotateWriter {
-	return &DailyRotateWriter{
+// newDailyRotateWriter creates a new dailyRotateWriter.
+func newDailyRotateWriter(logger *lumberjack.Logger) *dailyRotateWriter {
+	return &dailyRotateWriter{
 		n:      getUnixDays(time.Now()),
 		Logger: logger,
 	}
 }
 
-func (w *DailyRotateWriter) Write(p []byte) (n int, err error) {
+func (w *dailyRotateWriter) Write(p []byte) (n int, err error) {
 	now := atomic.LoadUint32(&w.n)
 	t := getUnixDays(time.Now())
 	if t > now && atomic.CompareAndSwapUint32(&w.n, now, t) {

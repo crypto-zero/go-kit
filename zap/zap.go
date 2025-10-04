@@ -319,6 +319,6 @@ func NewZapWithRotation() (*Zap, func(), error) {
 		MaxSize:  DefaultRotateSizeInMB,
 		MaxAge:   DefaultRotateAgeInDays,
 	}
-	w := zapcore.AddSync(NewDailyRotateWriter(logger))
+	w := zapcore.AddSync(newDailyRotateWriter(logger))
 	return &Zap{writer: w}, func() { _ = logger.Close() }, nil
 }
