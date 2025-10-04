@@ -11,10 +11,16 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/exp/zapslog"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 const (
+	// LoggerNamed is the key for logger name in slog attributes.
 	LoggerNamed = "__LOGGER.NAMED__"
+	// DefaultRotateSizeInMB is the default rotate size in MB.
+	DefaultRotateSizeInMB = 1024
+	// DefaultRotateAgeInDays is the default rotate age in days.
+	DefaultRotateAgeInDays = 15
 )
 
 // Adapter is an adapter logger interface.
@@ -276,18 +282,43 @@ func (z *Zap) Slog() *slog.Logger {
 	return z.SlogWithCore(core)
 }
 
-// NewZap returns a zap logger.
-// zapslog stabilization tracking issue: https://github.com/uber-go/zap/issues/1333
-func NewZap() (*Zap, func(), error) {
+// DefaultLogFilePath returns the default log file path.
+func DefaultLogFilePath() (string, error) {
 	name := fmt.Sprintf("%s.log", filepath.Base(os.Args[0]))
 	wd, err := os.Getwd()
 	if err != nil {
-		return nil, nil, fmt.Errorf("get working directory: %w", err)
+		return "", fmt.Errorf("get working directory: %w", err)
+	}
+	return filepath.Join(wd, "logs", name), nil
+}
+
+// NewZap returns a zap logger.
+// zapslog stabilization tracking issue: https://github.com/uber-go/zap/issues/1333
+func NewZap() (*Zap, func(), error) {
+	path, err := DefaultLogFilePath()
+	if err != nil {
+		return nil, nil, err
 	}
 
-	writer, cleanup, err := zap.Open(filepath.Join(wd, "logs", name))
+	writer, cleanup, err := zap.Open(path)
 	if err != nil {
 		return nil, nil, fmt.Errorf("open log file: %w", err)
 	}
 	return &Zap{writer: writer}, cleanup, nil
+}
+
+// NewZapWithRotation returns a zap logger with rotation.
+func NewZapWithRotation() (*Zap, func(), error) {
+	path, err := DefaultLogFilePath()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	logger := &lumberjack.Logger{
+		Filename: path,
+		MaxSize:  DefaultRotateSizeInMB,
+		MaxAge:   DefaultRotateAgeInDays,
+	}
+	w := zapcore.AddSync(NewDailyRotateWriter(logger))
+	return &Zap{writer: w}, func() { _ = logger.Close() }, nil
 }
