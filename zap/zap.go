@@ -222,6 +222,7 @@ func (z *Zap) zapFields() (out []zap.Field) {
 func (z *Zap) NewEncoderConfig() zapcore.EncoderConfig {
 	ec := zap.NewProductionEncoderConfig()
 	ec.MessageKey, ec.LevelKey, ec.NameKey = "msg", "level", "logger"
+	ec.StacktraceKey = ""
 	ec.EncodeLevel, ec.EncodeTime = zapcore.CapitalLevelEncoder, zapcore.ISO8601TimeEncoder
 	return ec
 }
