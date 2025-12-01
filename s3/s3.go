@@ -3,6 +3,7 @@ package s3
 import (
 	"context"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -34,6 +35,8 @@ type S3 interface {
 		err error)
 	// DeleteObject deletes an object from bucket
 	DeleteObject(ctx context.Context, bucket, key string) error
+	// StatObject stats an object in bucket
+	StatObject(ctx context.Context, bucket, key string) (minio.ObjectInfo, error)
 }
 
 // MinioS3Impl provides operations on AWS/s3 and minio for implementing S3 interface
@@ -104,6 +107,17 @@ func (m *MinioS3Impl) DeleteObject(ctx context.Context, bucket, key string) erro
 		return fmt.Errorf("failed to delete object: %w", err)
 	}
 	return nil
+}
+
+func (m *MinioS3Impl) StatObject(ctx context.Context, bucket, key string) (minio.ObjectInfo, error) {
+	info, err := m.client.StatObject(ctx, bucket, key, minio.StatObjectOptions{})
+	if IsNoSuchKeyErr(err) {
+		return minio.ObjectInfo{}, ErrNoSuchKey
+	}
+	if err != nil {
+		return minio.ObjectInfo{}, fmt.Errorf("failed to stat object: %w", err)
+	}
+	return info, nil
 }
 
 // NewMinioS3Impl creates a new MinioS3Impl
@@ -215,3 +229,5 @@ func IsNoSuchKeyErr(err error) bool {
 	}
 	return false
 }
+
+var ErrNoSuchKey = errors.New("no such key")
