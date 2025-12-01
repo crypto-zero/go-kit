@@ -91,14 +91,16 @@ func (s *TestMinioSuite) TestGetObject() {
 	_, err = object.Stat()
 	r.NoError(err, "failed to stat object")
 
+}
+
+func (s *TestMinioSuite) TestStatObject() {
+	r := s.Require()
+	ctx := context.Background()
 	// Test get object with certainly not an existed key
-	object, err = s.s3.GetObject(ctx, s.bucket, ObjectKey+"-not-exist", minio.GetObjectOptions{})
+	objectInfo, err := s.s3.StatObject(ctx, s.bucket, ObjectKey+"-not-exist")
 	// When an object is not found, minio-go returns no error
-	r.NotNil(object, "object should not be nil")
-	r.NoError(err, "failed to get object with certainly not exist key")
-	_, err = object.Stat()
-	r.Error(err, "stat object with certainly not exist key should fail")
-	r.True(IsNoSuchKeyErr(err), "stat object with certainly not exist key should return not exists error")
+	r.NotNil(objectInfo, "object should not be nil")
+	r.EqualError(err, ErrNoSuchKey.Error(), "stat object with certainly not exist key should return not exists error")
 }
 
 func (s *TestMinioSuite) TestPresignedGetObject() {
@@ -128,7 +130,7 @@ func (s *TestMinioSuite) TestPresignedPutObject() {
 	r.NoError(err, "failed to presign put object")
 	r.NotNil(url, "url is nil")
 	r.NotNil(headers, "headers is nil")
-	req, err := http.NewRequest(http.MethodPut, url.String(), nil)
+	req, err := http.NewRequest(http.MethodPut, url.String(), bytes.NewReader([]byte(ObjectBody)))
 	r.NoError(err, "failed to create put request")
 	req.Header = headers
 	req.Body = io.NopCloser(bytes.NewReader([]byte(ObjectBody)))
@@ -138,7 +140,7 @@ func (s *TestMinioSuite) TestPresignedPutObject() {
 	defer reply.Body.Close()
 	data, err := io.ReadAll(reply.Body)
 	r.NoError(err, "failed to read reply body")
-	r.True(len(data) == 0, "reply body should be empty")
+	r.Empty(data, "reply body should be empty")
 	r.Equal(http.StatusOK, reply.StatusCode, "put object failed")
 }
 
