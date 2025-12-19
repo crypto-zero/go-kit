@@ -3,10 +3,13 @@ package ent
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/ed25519"
 	"crypto/hmac"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"errors"
 	"fmt"
 )
@@ -45,12 +48,12 @@ func NewEncryptor(plaintext string) (*EntEncryptor, error) {
 	return &EntEncryptor{key: keyBytes}, nil
 }
 
-// NewEncryptorFromED25519EncryptedKey creates an encryptor from an ED25519-encrypted key ciphertext.
-// The encrypted key (ciphertext) will be decrypted using the ED25519 private key,
+// NewEncryptorFromRSAEncryptedKey creates an encryptor from an RSA-encrypted key ciphertext.
+// The encrypted key (ciphertext) will be decrypted using the RSA private key,
 // then used as the AES encryption key.
-// encryptedKey: base64-encoded ciphertext of the key encrypted with ED25519 public key
-// privateKey: ED25519 private key used to decrypt the encrypted key
-func NewEncryptorFromED25519EncryptedKey(encryptedKey string, privateKey ed25519.PrivateKey) (*EntEncryptor, error) {
+// encryptedKey: base64-encoded ciphertext of the key encrypted with RSA public key
+// privateKey: RSA private key used to decrypt the encrypted key
+func NewEncryptorFromRSAEncryptedKey(encryptedKey string, privateKey *rsa.PrivateKey) (*EntEncryptor, error) {
 	if encryptedKey == "" {
 		return nil, errors.New("encrypted key cannot be empty")
 	}
@@ -61,42 +64,46 @@ func NewEncryptorFromED25519EncryptedKey(encryptedKey string, privateKey ed25519
 		return nil, fmt.Errorf("failed to decode encrypted key: %w", err)
 	}
 
-	// Extract the public key from the private key
-	// Use the same key derivation as encryption (using public key)
-	publicKey := privateKey.Public().(ed25519.PublicKey)
-
-	// Derive decryption key from ED25519 public key using SHA256
-	// This matches the encryption key derivation
-	derivedKey := sha256.Sum256(publicKey)
-
-	// Create AES cipher
-	block, err := aes.NewCipher(derivedKey[:])
-	if err != nil {
-		return nil, fmt.Errorf("failed to create cipher: %w", err)
-	}
-
-	// Create GCM mode
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create GCM: %w", err)
-	}
-
-	nonceSize := gcm.NonceSize()
-	if len(encryptedBytes) < nonceSize {
-		return nil, errors.New("encrypted key too short")
-	}
-
-	// Extract nonce and ciphertext
-	nonce, ciphertext := encryptedBytes[:nonceSize], encryptedBytes[nonceSize:]
-
-	// Decrypt the key
-	decryptedKey, err := gcm.Open(nil, nonce, ciphertext, nil)
+	// Decrypt using RSA private key with OAEP padding
+	hash := sha256.New()
+	decryptedKey, err := rsa.DecryptOAEP(hash, rand.Reader, privateKey, encryptedBytes, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt key: %w", err)
 	}
 
 	// Validate and use the decrypted key
 	return NewEncryptor(string(decryptedKey))
+}
+
+// ParseRSAPrivateKeyFromPEM parses an RSA private key from PEM format.
+func ParseRSAPrivateKeyFromPEM(pemData []byte) (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode(pemData)
+	if block == nil {
+		return nil, errors.New("failed to decode PEM block")
+	}
+
+	var key interface{}
+	var err error
+
+	switch block.Type {
+	case "RSA PRIVATE KEY":
+		key, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+	case "PRIVATE KEY":
+		key, err = x509.ParsePKCS8PrivateKey(block.Bytes)
+	default:
+		return nil, fmt.Errorf("unsupported key type: %s", block.Type)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse private key: %w", err)
+	}
+
+	rsaKey, ok := key.(*rsa.PrivateKey)
+	if !ok {
+		return nil, errors.New("key is not an RSA private key")
+	}
+
+	return rsaKey, nil
 }
 
 // Encrypt encrypts a string deterministically and returns base64-encoded ciphertext.
