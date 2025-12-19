@@ -27,7 +27,7 @@ type EntEncryptor struct {
 }
 
 // NewEncryptor creates an encryptor from a string (automatically handles key length).
-func NewEncryptor(plaintext string) error {
+func NewEncryptor(plaintext string) (*EntEncryptor, error) {
 	keyBytes := []byte(plaintext)
 	keyLen := len(keyBytes)
 
@@ -38,8 +38,7 @@ func NewEncryptor(plaintext string) error {
 		keyBytes = hash[:]
 	}
 
-	DefaultEntEncryptor = &EntEncryptor{key: keyBytes}
-	return nil
+	return &EntEncryptor{key: keyBytes}, nil
 }
 
 // NewEncryptorFromED25519EncryptedKey creates an encryptor from an ED25519-encrypted key ciphertext.
