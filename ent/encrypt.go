@@ -11,13 +11,23 @@ import (
 	"fmt"
 )
 
+var DefaultEntEncryptor *EntEncryptor
+
+func GetDefaultEncryptor() *EntEncryptor {
+	return DefaultEntEncryptor
+}
+
+func SetDefaultEncryptor(encryptor *EntEncryptor) {
+	DefaultEntEncryptor = encryptor
+}
+
 // EntEncryptor provides symmetric encryption functionality using AES-GCM mode.
 type EntEncryptor struct {
 	key []byte
 }
 
 // NewEncryptor creates an encryptor from a string (automatically handles key length).
-func NewEncryptor(plaintext string) (*EntEncryptor, error) {
+func NewEncryptor(plaintext string) error {
 	keyBytes := []byte(plaintext)
 	keyLen := len(keyBytes)
 
@@ -28,7 +38,8 @@ func NewEncryptor(plaintext string) (*EntEncryptor, error) {
 		keyBytes = hash[:]
 	}
 
-	return &EntEncryptor{key: keyBytes}, nil
+	DefaultEntEncryptor = &EntEncryptor{key: keyBytes}
+	return nil
 }
 
 // NewEncryptorFromED25519EncryptedKey creates an encryptor from an ED25519-encrypted key ciphertext.
