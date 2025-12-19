@@ -132,7 +132,7 @@ type TestEntity struct {
 }
 
 func TestEncryptHook(t *testing.T) {
-	key := []byte("12345678901234567890123456789012") // 32 bytes
+	key := "12345678901234567890123456789012" // 32 bytes
 	encryptor, err := NewEncryptor(key)
 	require.NoError(t, err)
 
@@ -278,7 +278,7 @@ func TestEncryptHook(t *testing.T) {
 }
 
 func TestDecryptEntity(t *testing.T) {
-	key := []byte("12345678901234567890123456789012") // 32 bytes
+	key := "12345678901234567890123456789012" // 32 bytes
 	encryptor, err := NewEncryptor(key)
 	require.NoError(t, err)
 
@@ -391,7 +391,7 @@ func TestDecryptEntity(t *testing.T) {
 }
 
 func TestDecryptEntitySlice(t *testing.T) {
-	key := []byte("12345678901234567890123456789012") // 32 bytes
+	key := "12345678901234567890123456789012" // 32 bytes
 	encryptor, err := NewEncryptor(key)
 	require.NoError(t, err)
 
@@ -426,7 +426,7 @@ func TestDecryptEntitySlice(t *testing.T) {
 }
 
 func TestDecryptEntitySliceInvalidInput(t *testing.T) {
-	key := []byte("12345678901234567890123456789012") // 32 bytes
+	key := "12345678901234567890123456789012" // 32 bytes
 	encryptor, err := NewEncryptor(key)
 	require.NoError(t, err)
 
@@ -437,7 +437,7 @@ func TestDecryptEntitySliceInvalidInput(t *testing.T) {
 }
 
 func TestDecryptInterceptor(t *testing.T) {
-	key := []byte("12345678901234567890123456789012") // 32 bytes
+	key := "12345678901234567890123456789012" // 32 bytes
 	encryptor, err := NewEncryptor(key)
 	require.NoError(t, err)
 

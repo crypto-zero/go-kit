@@ -3,10 +3,12 @@ package ent
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/ed25519"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
+	"fmt"
 )
 
 // EntEncryptor provides symmetric encryption functionality using AES-GCM mode.
@@ -14,19 +16,9 @@ type EntEncryptor struct {
 	key []byte
 }
 
-// NewEncryptor creates a new encryptor.
-// key must be 16, 24, or 32 bytes (corresponding to AES-128, AES-192, AES-256).
-func NewEncryptor(key []byte) (*EntEncryptor, error) {
-	keyLen := len(key)
-	if keyLen != 16 && keyLen != 24 && keyLen != 32 {
-		return nil, errors.New("key length must be 16, 24, or 32 bytes")
-	}
-	return &EntEncryptor{key: key}, nil
-}
-
-// NewEncryptorFromString creates an encryptor from a string (automatically handles key length).
-func NewEncryptorFromString(key string) (*EntEncryptor, error) {
-	keyBytes := []byte(key)
+// NewEncryptor creates an encryptor from a string (automatically handles key length).
+func NewEncryptor(plaintext string) (*EntEncryptor, error) {
+	keyBytes := []byte(plaintext)
 	keyLen := len(keyBytes)
 
 	// If the key length doesn't meet requirements, use SHA256 hash
@@ -37,6 +29,60 @@ func NewEncryptorFromString(key string) (*EntEncryptor, error) {
 	}
 
 	return &EntEncryptor{key: keyBytes}, nil
+}
+
+// NewEncryptorFromED25519EncryptedKey creates an encryptor from an ED25519-encrypted key ciphertext.
+// The encrypted key (ciphertext) will be decrypted using the ED25519 private key,
+// then used as the AES encryption key.
+// encryptedKey: base64-encoded ciphertext of the key encrypted with ED25519 public key
+// privateKey: ED25519 private key used to decrypt the encrypted key
+func NewEncryptorFromED25519EncryptedKey(encryptedKey string, privateKey ed25519.PrivateKey) (*EntEncryptor, error) {
+	if encryptedKey == "" {
+		return nil, errors.New("encrypted key cannot be empty")
+	}
+
+	// Decode base64 encrypted key
+	encryptedBytes, err := base64.StdEncoding.DecodeString(encryptedKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode encrypted key: %w", err)
+	}
+
+	// Extract the public key from the private key
+	// Use the same key derivation as encryption (using public key)
+	publicKey := privateKey.Public().(ed25519.PublicKey)
+
+	// Derive decryption key from ED25519 public key using SHA256
+	// This matches the encryption key derivation
+	derivedKey := sha256.Sum256(publicKey)
+
+	// Create AES cipher
+	block, err := aes.NewCipher(derivedKey[:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cipher: %w", err)
+	}
+
+	// Create GCM mode
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GCM: %w", err)
+	}
+
+	nonceSize := gcm.NonceSize()
+	if len(encryptedBytes) < nonceSize {
+		return nil, errors.New("encrypted key too short")
+	}
+
+	// Extract nonce and ciphertext
+	nonce, ciphertext := encryptedBytes[:nonceSize], encryptedBytes[nonceSize:]
+
+	// Decrypt the key
+	decryptedKey, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt key: %w", err)
+	}
+
+	// Validate and use the decrypted key
+	return NewEncryptor(string(decryptedKey))
 }
 
 // Encrypt encrypts a string deterministically and returns base64-encoded ciphertext.

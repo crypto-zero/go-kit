@@ -7,38 +7,33 @@ import (
 func TestNewEncryptor(t *testing.T) {
 	tests := []struct {
 		name    string
-		key     []byte
+		key     string
 		wantErr bool
 	}{
 		{
 			name:    "valid 16-byte key (AES-128)",
-			key:     []byte("1234567890123456"), // 16 bytes
+			key:     "1234567890123456", // 16 bytes
 			wantErr: false,
 		},
 		{
 			name:    "valid 24-byte key (AES-192)",
-			key:     []byte("123456789012345678901234"), // 24 bytes
+			key:     "123456789012345678901234", // 24 bytes
 			wantErr: false,
 		},
 		{
 			name:    "valid 32-byte key (AES-256)",
-			key:     []byte("12345678901234567890123456789012"), // 32 bytes
+			key:     "12345678901234567890123456789012", // 32 bytes
 			wantErr: false,
 		},
 		{
-			name:    "invalid key length (15 bytes)",
-			key:     []byte("123456789012345"), // 15 bytes
-			wantErr: true,
-		},
-		{
-			name:    "invalid key length (33 bytes)",
-			key:     []byte("123456789012345678901234567890123"), // 33 bytes
-			wantErr: true,
+			name:    "short key (auto-hashed to 32 bytes)",
+			key:     "short-key",
+			wantErr: false,
 		},
 		{
 			name:    "empty key",
-			key:     []byte{},
-			wantErr: true,
+			key:     "",
+			wantErr: false, // Empty key will be hashed to 32 bytes
 		},
 	}
 
@@ -56,49 +51,8 @@ func TestNewEncryptor(t *testing.T) {
 	}
 }
 
-func TestNewEncryptorFromString(t *testing.T) {
-	tests := []struct {
-		name string
-		key  string
-	}{
-		{
-			name: "short key (auto-hashed to 32 bytes)",
-			key:  "short-key",
-		},
-		{
-			name: "16-byte key",
-			key:  "1234567890123456",
-		},
-		{
-			name: "24-byte key",
-			key:  "123456789012345678901234",
-		},
-		{
-			name: "32-byte key",
-			key:  "12345678901234567890123456789012",
-		},
-		{
-			name: "empty key",
-			key:  "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewEncryptorFromString(tt.key)
-			if err != nil {
-				t.Errorf("NewEncryptorFromString() error = %v", err)
-				return
-			}
-			if got == nil {
-				t.Errorf("NewEncryptorFromString() returned nil encryptor")
-			}
-		})
-	}
-}
-
 func TestEncryptDecrypt(t *testing.T) {
-	key := []byte("12345678901234567890123456789012") // 32 bytes
+	key := "12345678901234567890123456789012" // 32 bytes
 	encryptor, err := NewEncryptor(key)
 	if err != nil {
 		t.Fatalf("NewEncryptor() error = %v", err)
@@ -169,7 +123,7 @@ func TestEncryptDecrypt(t *testing.T) {
 }
 
 func TestEncryptDeterministic(t *testing.T) {
-	key := []byte("12345678901234567890123456789012") // 32 bytes
+	key := "12345678901234567890123456789012" // 32 bytes
 	encryptor, err := NewEncryptor(key)
 	if err != nil {
 		t.Fatalf("NewEncryptor() error = %v", err)
@@ -213,8 +167,8 @@ func TestEncryptDeterministic(t *testing.T) {
 }
 
 func TestEncryptDifferentKeys(t *testing.T) {
-	key1 := []byte("12345678901234567890123456789012") // 32 bytes
-	key2 := []byte("abcdefghijklmnopqrstuvwxyz123456") // 32 bytes
+	key1 := "12345678901234567890123456789012" // 32 bytes
+	key2 := "abcdefghijklmnopqrstuvwxyz123456" // 32 bytes
 
 	encryptor1, err := NewEncryptor(key1)
 	if err != nil {
@@ -274,7 +228,7 @@ func TestEncryptDifferentKeys(t *testing.T) {
 }
 
 func TestDecryptInvalidCiphertext(t *testing.T) {
-	key := []byte("12345678901234567890123456789012") // 32 bytes
+	key := "12345678901234567890123456789012" // 32 bytes
 	encryptor, err := NewEncryptor(key)
 	if err != nil {
 		t.Fatalf("NewEncryptor() error = %v", err)
