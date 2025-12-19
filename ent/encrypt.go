@@ -11,14 +11,14 @@ import (
 	"fmt"
 )
 
-var DefaultEntEncryptor *EntEncryptor
+var defaultEntEncryptor *EntEncryptor
 
 func GetDefaultEncryptor() *EntEncryptor {
-	return DefaultEntEncryptor
+	return defaultEntEncryptor
 }
 
 func SetDefaultEncryptor(encryptor *EntEncryptor) {
-	DefaultEntEncryptor = encryptor
+	defaultEntEncryptor = encryptor
 }
 
 // EntEncryptor provides symmetric encryption functionality using AES-GCM mode.
