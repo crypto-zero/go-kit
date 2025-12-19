@@ -1,8 +1,6 @@
 module github.com/crypto-zero/go-kit
 
-go 1.24.0
-
-toolchain go1.24.7
+go 1.25.5
 
 require (
 	entgo.io/ent v0.14.5
@@ -75,3 +73,6 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20250825161204-c5933d9347a5 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+// 将 ent_crypto 导入路径映射到本地 ent-crypto 目录
+replace github.com/crypto-zero/go-kit/ent_crypto => ./ent-crypto
