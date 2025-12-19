@@ -7,9 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/base64"
-	"encoding/pem"
 	"errors"
 	"fmt"
 )
@@ -73,37 +71,6 @@ func NewEncryptorFromRSAEncryptedKey(encryptedKey string, privateKey *rsa.Privat
 
 	// Validate and use the decrypted key
 	return NewEncryptor(string(decryptedKey))
-}
-
-// ParseRSAPrivateKeyFromPEM parses an RSA private key from PEM format.
-func ParseRSAPrivateKeyFromPEM(pemData []byte) (*rsa.PrivateKey, error) {
-	block, _ := pem.Decode(pemData)
-	if block == nil {
-		return nil, errors.New("failed to decode PEM block")
-	}
-
-	var key interface{}
-	var err error
-
-	switch block.Type {
-	case "RSA PRIVATE KEY":
-		key, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-	case "PRIVATE KEY":
-		key, err = x509.ParsePKCS8PrivateKey(block.Bytes)
-	default:
-		return nil, fmt.Errorf("unsupported key type: %s", block.Type)
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse private key: %w", err)
-	}
-
-	rsaKey, ok := key.(*rsa.PrivateKey)
-	if !ok {
-		return nil, errors.New("key is not an RSA private key")
-	}
-
-	return rsaKey, nil
 }
 
 // Encrypt encrypts a string deterministically and returns base64-encoded ciphertext.

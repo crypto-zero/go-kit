@@ -2,6 +2,27 @@
 
 ## 使用 RSA 加密密钥
 
+### 在代码中使用
+
+```go
+import "github.com/crypto-zero/go-kit/ent"
+
+// 从字符串解析 RSA 私钥
+privateKeyPEM := `-----BEGIN RSA PRIVATE KEY-----
+...
+-----END RSA PRIVATE KEY-----`
+privateKey, err := ent.ParseRSAPrivateKeyFromString(privateKeyPEM)
+
+// 从字符串解析 RSA 公钥
+publicKeyPEM := `-----BEGIN PUBLIC KEY-----
+...
+-----END PUBLIC KEY-----`
+publicKey, err := ent.ParseRSAPublicKeyFromString(publicKeyPEM)
+
+// 从 RSA 加密的密文创建加密器
+encryptor, err := ent.NewEncryptorFromRSAEncryptedKey(encryptedKey, privateKey)
+```
+
 ### 在 macOS 上使用 OpenSSL 一行命令加密
 
 ```bash

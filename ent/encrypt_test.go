@@ -1,7 +1,16 @@
 package ent
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewEncryptor(t *testing.T) {
@@ -266,3 +275,82 @@ func TestDecryptInvalidCiphertext(t *testing.T) {
 	}
 }
 
+func TestParseRSAPrivateKeyFromString(t *testing.T) {
+	// Generate a test RSA key
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	// Encode to PEM format
+	privateKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+	})
+
+	// Test parsing from string
+	parsedKey, err := ParseRSAPrivateKeyFromString(string(privateKeyPEM))
+	require.NoError(t, err)
+	assert.NotNil(t, parsedKey)
+	assert.Equal(t, privateKey.D, parsedKey.D)
+	assert.Equal(t, privateKey.N, parsedKey.N)
+
+	// Test with invalid string
+	_, err = ParseRSAPrivateKeyFromString("invalid key")
+	assert.Error(t, err)
+}
+
+func TestParseRSAPublicKeyFromString(t *testing.T) {
+	// Generate a test RSA key
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	// Encode public key to PEM format
+	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	require.NoError(t, err)
+
+	publicKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: publicKeyBytes,
+	})
+
+	// Test parsing from string
+	parsedKey, err := ParseRSAPublicKeyFromString(string(publicKeyPEM))
+	require.NoError(t, err)
+	assert.NotNil(t, parsedKey)
+	assert.Equal(t, privateKey.PublicKey.N, parsedKey.N)
+	assert.Equal(t, privateKey.PublicKey.E, parsedKey.E)
+
+	// Test with invalid string
+	_, err = ParseRSAPublicKeyFromString("invalid key")
+	assert.Error(t, err)
+}
+
+func TestNewEncryptorFromRSAEncryptedKey(t *testing.T) {
+	// Generate RSA key pair
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	// Test key to encrypt
+	testKey := []byte("12345678901234567890123456789012") // 32 bytes
+
+	// Encrypt the key using RSA public key
+	hash := sha256.New()
+	encryptedBytes, err := rsa.EncryptOAEP(hash, rand.Reader, &privateKey.PublicKey, testKey, nil)
+	require.NoError(t, err)
+
+	encryptedKey := base64.StdEncoding.EncodeToString(encryptedBytes)
+
+	// Create encryptor from encrypted key
+	encryptor, err := NewEncryptorFromRSAEncryptedKey(encryptedKey, privateKey)
+	require.NoError(t, err)
+	assert.NotNil(t, encryptor)
+
+	// Test that the encryptor works correctly
+	plaintext := "test@example.com"
+	encrypted, err := encryptor.Encrypt(plaintext)
+	require.NoError(t, err)
+	assert.NotEmpty(t, encrypted)
+
+	decrypted, err := encryptor.Decrypt(encrypted)
+	require.NoError(t, err)
+	assert.Equal(t, plaintext, decrypted)
+}
