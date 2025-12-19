@@ -17,8 +17,12 @@ func GetDefaultEncryptor() *EntEncryptor {
 	return defaultEntEncryptor
 }
 
-func SetDefaultEncryptor(encryptor *EntEncryptor) {
+func SetDefaultEncryptor(encryptor *EntEncryptor) error {
+	if encryptor == nil {
+		return errors.New("encryptor cannot be nil")
+	}
 	defaultEntEncryptor = encryptor
+	return nil
 }
 
 // EntEncryptor provides symmetric encryption functionality using AES-GCM mode.
