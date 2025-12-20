@@ -12,7 +12,9 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
+	"unicode"
 
 	"entgo.io/ent"
 )
@@ -43,12 +45,12 @@ func SetDefaultEncryptor(encryptor *EntEncryptor) error {
 }
 
 // EntEncryptor provides symmetric encryption functionality using AES-GCM mode.
-// WARNING: This uses deterministic encryption for database JOIN operations,
-// but it reveals when the same plaintext is encrypted. Use with caution.
+// It supports both deterministic and non-deterministic encryption modes.
 type EntEncryptor struct {
-	key []byte
-	gcm cipher.AEAD // Cache GCM instance for performance
-	mu  sync.RWMutex
+	key           []byte
+	gcm           cipher.AEAD // Cache GCM instance for performance
+	mu            sync.RWMutex
+	deterministic bool // If true, uses deterministic encryption (supports JOIN but reveals patterns)
 }
 
 // NewEncryptor creates an encryptor from a string key (automatically handles key length).
@@ -80,8 +82,9 @@ func NewEncryptor(key string) (*EntEncryptor, error) {
 	}
 
 	return &EntEncryptor{
-		key: keyBytes,
-		gcm: gcm,
+		key:           keyBytes,
+		gcm:           gcm,
+		deterministic: true, // Default to deterministic for backward compatibility
 	}, nil
 }
 
@@ -115,9 +118,39 @@ func NewEncryptorFromRSAEncryptedKey(encryptedKey string, privateKey *rsa.Privat
 	return NewEncryptor(string(decryptedKey))
 }
 
-// Encrypt encrypts a string deterministically and returns base64-encoded ciphertext.
-// WARNING: The same plaintext with the same key will always produce the same ciphertext.
-// This allows JOIN operations but reveals when the same data is encrypted.
+// NewSecureEncryptor creates an encryptor with non-deterministic encryption (random nonce).
+// This is more secure than deterministic encryption as it doesn't reveal data patterns,
+// but it doesn't support JOIN operations on encrypted fields.
+// key: the encryption key string (cannot be empty)
+func NewSecureEncryptor(key string) (*EntEncryptor, error) {
+	encryptor, err := NewEncryptor(key)
+	if err != nil {
+		return nil, err
+	}
+	encryptor.deterministic = false
+	return encryptor, nil
+}
+
+// SetDeterministic sets whether to use deterministic encryption.
+// - true: deterministic encryption (same plaintext = same ciphertext, supports JOIN but reveals patterns)
+// - false: non-deterministic encryption (random nonce, more secure but no JOIN support)
+func (e *EntEncryptor) SetDeterministic(deterministic bool) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.deterministic = deterministic
+}
+
+// IsDeterministic returns whether the encryptor uses deterministic encryption.
+func (e *EntEncryptor) IsDeterministic() bool {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.deterministic
+}
+
+// Encrypt encrypts a string and returns base64-encoded ciphertext.
+// The encryption mode (deterministic or non-deterministic) depends on the encryptor's configuration.
+// - Deterministic: same plaintext = same ciphertext (supports JOIN but reveals patterns)
+// - Non-deterministic: random nonce each time (more secure but no JOIN support)
 // plaintext: the string to encrypt
 func (e *EntEncryptor) Encrypt(plaintext string) (string, error) {
 	if plaintext == "" {
@@ -127,6 +160,7 @@ func (e *EntEncryptor) Encrypt(plaintext string) (string, error) {
 	e.mu.RLock()
 	gcm := e.gcm
 	key := e.key // Get key under lock protection
+	deterministic := e.deterministic
 	e.mu.RUnlock()
 
 	if gcm == nil {
@@ -136,12 +170,22 @@ func (e *EntEncryptor) Encrypt(plaintext string) (string, error) {
 		return "", errors.New("encryptor has been cleared")
 	}
 
-	// Derive nonce from key and plaintext using HMAC-SHA256
-	// This ensures the same plaintext always produces the same nonce
 	nonceSize := gcm.NonceSize()
-	mac := hmac.New(sha256.New, key)
-	mac.Write([]byte(plaintext))
-	nonce := mac.Sum(nil)[:nonceSize]
+	var nonce []byte
+
+	if deterministic {
+		// Derive nonce from key and plaintext using HMAC-SHA256
+		// This ensures the same plaintext always produces the same nonce
+		mac := hmac.New(sha256.New, key)
+		mac.Write([]byte(plaintext))
+		nonce = mac.Sum(nil)[:nonceSize]
+	} else {
+		// Generate random nonce for non-deterministic encryption
+		nonce = make([]byte, nonceSize)
+		if _, err := rand.Read(nonce); err != nil {
+			return "", fmt.Errorf("failed to generate random nonce: %w", err)
+		}
+	}
 
 	// Encrypt
 	ciphertext := gcm.Seal(nonce, nonce, []byte(plaintext), nil)
@@ -232,6 +276,33 @@ func (e *EntEncryptor) encryptStringField(fieldName string, value interface{}) (
 	return encrypted, nil
 }
 
+// HashForIndex generates a deterministic hash of the plaintext for use as an index.
+// This allows JOIN operations and equality queries on encrypted fields without revealing the plaintext.
+// The hash is computed using HMAC-SHA256 with the encryption key.
+// WARNING: This hash is deterministic and can be used to identify duplicate values.
+// plaintext: the string to hash
+func (e *EntEncryptor) HashForIndex(plaintext string) (string, error) {
+	if plaintext == "" {
+		return "", nil
+	}
+
+	e.mu.RLock()
+	key := e.key
+	e.mu.RUnlock()
+
+	if key == nil {
+		return "", errors.New("encryptor has been cleared")
+	}
+
+	// Use HMAC-SHA256 to generate a deterministic hash
+	mac := hmac.New(sha256.New, key)
+	mac.Write([]byte(plaintext))
+	hash := mac.Sum(nil)
+
+	// Return base64-encoded hash
+	return base64.StdEncoding.EncodeToString(hash), nil
+}
+
 // EncryptHook creates a generic encryption hook for any ent entity.
 // It encrypts specified string fields before saving (using deterministic encryption, supports JOIN queries).
 // fields: list of field names to encrypt, if empty, no fields will be encrypted.
@@ -271,7 +342,6 @@ func (e *EntEncryptor) EncryptHook(fields ...string) ent.Hook {
 					}
 				}
 			}
-
 			return next.Mutate(ctx, m)
 		})
 	}
@@ -282,14 +352,129 @@ func (e *EntEncryptor) EncryptHook(fields ...string) ent.Hook {
 func EncryptHookWithDefault(fields ...string) ent.Hook {
 	encryptor := GetDefaultEncryptor()
 	if encryptor == nil {
-		panic("no default encryptor is set, call SetDefaultEncryptor() first")
+		panic("no default encryptor is set, call encryptor first")
 	}
 	return encryptor.EncryptHook(fields...)
 }
 
+// EncryptHookWithIndex creates an encryption hook that encrypts fields and generates hash indexes.
+// This provides a secure way to support JOIN operations: the encrypted field stores the data,
+// and the hash index field (fieldName + "Hash") can be used for queries and JOINs.
+// fields: list of field names to encrypt. For each field "email", it will also set "emailHash".
+// Example: EncryptHookWithIndex("email", "phone") will encrypt "email" and "phone",
+// and set "emailHash" and "phoneHash" fields for indexing.
+func (e *EntEncryptor) EncryptHookWithIndex(fields ...string) ent.Hook {
+	encryptor := e
+	if encryptor == nil {
+		encryptor = GetDefaultEncryptor()
+		if encryptor == nil {
+			panic("encryptor is nil and no default encryptor is set")
+		}
+	}
+
+	fieldSet := newFieldSet(fields)
+	if len(fieldSet) == 0 {
+		// No fields to encrypt, return a no-op hook
+		return func(next ent.Mutator) ent.Mutator {
+			return next
+		}
+	}
+
+	return func(next ent.Mutator) ent.Mutator {
+		return ent.MutateFunc(func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+			// Encrypt specified fields and generate hash indexes
+			for fieldName := range fieldSet {
+				value, exists := m.Field(fieldName)
+				if !exists {
+					continue // Field doesn't exist or not set, skip
+				}
+
+				strValue, ok := value.(string)
+				if !ok || strValue == "" {
+					continue // Skip non-string or empty values
+				}
+
+				// Encrypt the field
+				encrypted, err := encryptor.encryptStringField(fieldName, strValue)
+				if err != nil {
+					return nil, err
+				}
+				if encrypted != "" {
+					if err := m.SetField(fieldName, encrypted); err != nil {
+						return nil, fmt.Errorf("set encrypted field %s failed: %w", fieldName, err)
+					}
+				}
+
+				// Generate hash index for the field (fieldName + "Hash")
+				hashFieldName := fieldName + "Hash"
+				hashValue, err := encryptor.HashForIndex(strValue)
+				if err != nil {
+					return nil, fmt.Errorf("generate hash for field %s failed: %w", fieldName, err)
+				}
+				if hashValue != "" {
+					// Try to set the hash field, but don't fail if it doesn't exist
+					if err := m.SetField(hashFieldName, hashValue); err != nil {
+						// Hash field might not exist in schema, that's okay
+						// We'll just skip it silently
+					}
+				}
+			}
+
+			return next.Mutate(ctx, m)
+		})
+	}
+}
+
+// EncryptHookWithIndexWithDefault creates an encryption hook with index using the default encryptor.
+func EncryptHookWithIndexWithDefault(fields ...string) ent.Hook {
+	encryptor := GetDefaultEncryptor()
+	if encryptor == nil {
+		panic("no default encryptor is set, call SetDefaultEncryptor() first")
+	}
+	return encryptor.EncryptHookWithIndex(fields...)
+}
+
+// snakeToPascal converts snake_case to PascalCase.
+// Example: "phone_country_code" -> "PhoneCountryCode"
+func snakeToPascal(s string) string {
+	if s == "" {
+		return s
+	}
+
+	parts := strings.Split(s, "_")
+	var result strings.Builder
+	for _, part := range parts {
+		if len(part) > 0 {
+			runes := []rune(part)
+			runes[0] = unicode.ToUpper(runes[0])
+			result.WriteString(string(runes))
+		}
+	}
+	return result.String()
+}
+
 // decryptStructField decrypts a single field in a struct using reflection.
 func (e *EntEncryptor) decryptStructField(rv reflect.Value, fieldName string) error {
+	// Try exact match first
 	field := rv.FieldByName(fieldName)
+
+	// If not found, try with first letter capitalized (Go exported field convention)
+	if !field.IsValid() && len(fieldName) > 0 {
+		// Convert first letter to uppercase
+		runes := []rune(fieldName)
+		if len(runes) > 0 && unicode.IsLower(runes[0]) {
+			runes[0] = unicode.ToUpper(runes[0])
+			capitalized := string(runes)
+			field = rv.FieldByName(capitalized)
+		}
+	}
+
+	// If still not found, try converting snake_case to PascalCase
+	if !field.IsValid() && strings.Contains(fieldName, "_") {
+		pascalCase := snakeToPascal(fieldName)
+		field = rv.FieldByName(pascalCase)
+	}
+
 	if !field.IsValid() || !field.CanSet() {
 		return nil // Field doesn't exist or cannot be set, skip silently
 	}
@@ -421,6 +606,7 @@ func (e *EntEncryptor) DecryptInterceptor(fields ...string) ent.Interceptor {
 				if err := encryptor.DecryptEntitySlice(value, fieldSlice...); err != nil {
 					return nil, err
 				}
+			default:
 				// Other types (int, string, etc.) are ignored as they are not entity types
 				// This is intentional behavior
 			}
