@@ -124,10 +124,6 @@ func (e *EntEncryptor) Decrypt(ciphertext string) (string, error) {
 		return "", fmt.Errorf("failed to decode base64: %w", err)
 	}
 
-	if e.gcm == nil {
-		return "", errors.New("encryptor has been cleared or not properly initialized")
-	}
-
 	if len(ciphertextBytes) < e.nonceSize {
 		return "", errors.New("ciphertext too short")
 	}
