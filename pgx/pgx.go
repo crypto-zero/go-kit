@@ -39,7 +39,7 @@ func (w CIDRWrapper) Value() (driver.Value, error) { return StdWrapper[netip.Pre
 // Scan implements the database/sql Scanner interface.
 //
 //goland:noinspection GoMixedReceiverTypes
-func (w *CIDRWrapper) Scan(src interface{}) error { return (*StdWrapper[netip.Prefix])(w).Scan(src) }
+func (w *CIDRWrapper) Scan(src any) error { return (*StdWrapper[netip.Prefix])(w).Scan(src) }
 
 // Value implements the database/sql/driver Valuer interface.
 //
@@ -49,7 +49,7 @@ func (w DurationWrapper) Value() (driver.Value, error) { return StdWrapper[time.
 // Scan implements the database/sql Scanner interface.
 //
 //goland:noinspection GoMixedReceiverTypes
-func (w *DurationWrapper) Scan(src interface{}) error {
+func (w *DurationWrapper) Scan(src any) error {
 	return (*StdWrapper[time.Duration])(w).Scan(src)
 }
 
@@ -64,7 +64,7 @@ func (w IntsWrapper) Value() (driver.Value, error) { return SliceWrapper[int](w)
 // Scan implements the database/sql Scanner interface.
 //
 //goland:noinspection GoMixedReceiverTypes
-func (w *IntsWrapper) Scan(src interface{}) error { return (*SliceWrapper[int])(w).Scan(src) }
+func (w *IntsWrapper) Scan(src any) error { return (*SliceWrapper[int])(w).Scan(src) }
 
 // NewFloatsWrapper returns a new FloatsWrapper.
 func NewFloatsWrapper() FloatsWrapper { return FloatsWrapper{V: make([]float64, 0)} }
@@ -77,7 +77,7 @@ func (w FloatsWrapper) Value() (driver.Value, error) { return SliceWrapper[float
 // Scan implements the database/sql Scanner interface.
 //
 //goland:noinspection GoMixedReceiverTypes
-func (w *FloatsWrapper) Scan(src interface{}) error { return (*SliceWrapper[float64])(w).Scan(src) }
+func (w *FloatsWrapper) Scan(src any) error { return (*SliceWrapper[float64])(w).Scan(src) }
 
 // NewStringsWrapper returns a new StringsWrapper.
 func NewStringsWrapper() StringsWrapper { return StringsWrapper{V: make([]string, 0)} }
@@ -90,7 +90,7 @@ func (w StringsWrapper) Value() (driver.Value, error) { return SliceWrapper[stri
 // Scan implements the database/sql Scanner interface.
 //
 //goland:noinspection GoMixedReceiverTypes
-func (w *StringsWrapper) Scan(src interface{}) error { return (*SliceWrapper[string])(w).Scan(src) }
+func (w *StringsWrapper) Scan(src any) error { return (*SliceWrapper[string])(w).Scan(src) }
 
 // NewCIDRsWrapper returns a new CIDRsWrapper.
 func NewCIDRsWrapper() CIDRsWrapper { return CIDRsWrapper{V: make([]netip.Prefix, 0)} }
@@ -103,7 +103,7 @@ func (w CIDRsWrapper) Value() (driver.Value, error) { return SliceWrapper[netip.
 // Scan implements the database/sql Scanner interface.
 //
 //goland:noinspection GoMixedReceiverTypes
-func (w *CIDRsWrapper) Scan(src interface{}) error { return (*SliceWrapper[netip.Prefix])(w).Scan(src) }
+func (w *CIDRsWrapper) Scan(src any) error { return (*SliceWrapper[netip.Prefix])(w).Scan(src) }
 
 // NewDurationsWrapper returns a new DurationsWrapper.
 func NewDurationsWrapper() DurationsWrapper {
@@ -120,7 +120,7 @@ func (w DurationsWrapper) Value() (driver.Value, error) {
 // Scan implements the database/sql Scanner interface.
 //
 //goland:noinspection GoMixedReceiverTypes
-func (w *DurationsWrapper) Scan(src interface{}) error {
+func (w *DurationsWrapper) Scan(src any) error {
 	return (*SliceWrapper[time.Duration])(w).Scan(src)
 }
 
@@ -139,7 +139,7 @@ func (w TimestampsWrapper) Value() (driver.Value, error) {
 // Scan implements the database/sql Scanner interface.
 //
 //goland:noinspection GoMixedReceiverTypes
-func (w *TimestampsWrapper) Scan(src interface{}) error {
+func (w *TimestampsWrapper) Scan(src any) error {
 	return (*SliceWrapper[time.Time])(w).Scan(src)
 }
 
@@ -165,7 +165,7 @@ func (w StdWrapper[T]) Value() (driver.Value, error) {
 // Scan implements the database/sql Scanner interface.
 //
 //goland:noinspection GoMixedReceiverTypes
-func (w *StdWrapper[T]) Scan(src interface{}) (err error) {
+func (w *StdWrapper[T]) Scan(src any) (err error) {
 	return typeMapScan(src, &w.V)
 }
 
@@ -188,12 +188,12 @@ func (w SliceWrapper[T]) Value() (driver.Value, error) {
 // Scan implements the database/sql Scanner interface.
 //
 //goland:noinspection GoMixedReceiverTypes
-func (w *SliceWrapper[T]) Scan(src interface{}) (err error) {
+func (w *SliceWrapper[T]) Scan(src any) (err error) {
 	return typeMapScan(src, &w.V)
 }
 
 // typeMapScan is a workaround for pgx standard sql library types.
-func typeMapScan[T any](src interface{}, target *T) (err error) {
+func typeMapScan[T any](src any, target *T) (err error) {
 	var value T
 	_, ok := typeMap.TypeForValue(&value)
 	if ok {
@@ -211,7 +211,7 @@ func typeMapScan[T any](src interface{}, target *T) (err error) {
 }
 
 // guessingScan is a workaround for pgx standard sql library types.
-func guessingScan[T any](src interface{}) (value T, err error) {
+func guessingScan[T any](src any) (value T, err error) {
 	var bufSrc []byte
 	if src != nil {
 		switch src := src.(type) {

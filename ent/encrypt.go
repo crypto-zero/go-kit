@@ -263,7 +263,7 @@ func newFieldSet(fields []string) fieldSet {
 
 // encryptStringField encrypts a string field value if it's a non-empty string.
 // Returns empty string if the value should be skipped (non-string, empty, etc.)
-func (e *EntEncryptor) encryptStringField(fieldName string, value interface{}) (string, error) {
+func (e *EntEncryptor) encryptStringField(fieldName string, value any) (string, error) {
 	strValue, ok := value.(string)
 	if !ok || strValue == "" {
 		return "", nil // Skip non-string or empty values
@@ -500,7 +500,7 @@ func (e *EntEncryptor) decryptStructField(rv reflect.Value, fieldName string) er
 // DecryptEntity is a generic decryption function that uses reflection to decrypt specified fields of any entity.
 // entity: any ent entity (pointer type, cannot be nil)
 // fields: list of field names to decrypt
-func (e *EntEncryptor) DecryptEntity(entity interface{}, fields ...string) error {
+func (e *EntEncryptor) DecryptEntity(entity any, fields ...string) error {
 	fieldSet := newFieldSet(fields)
 	if len(fieldSet) == 0 {
 		return nil // No fields specified, return directly
@@ -532,7 +532,7 @@ func (e *EntEncryptor) DecryptEntity(entity interface{}, fields ...string) error
 // DecryptEntitySlice decrypts all encrypted fields of entities in a slice.
 // entities: slice of entities to decrypt
 // fields: list of field names to decrypt
-func (e *EntEncryptor) DecryptEntitySlice(entities interface{}, fields ...string) error {
+func (e *EntEncryptor) DecryptEntitySlice(entities any, fields ...string) error {
 	rv := reflect.ValueOf(entities)
 	if rv.Kind() != reflect.Slice {
 		return fmt.Errorf("entities must be a slice type")
@@ -540,7 +540,7 @@ func (e *EntEncryptor) DecryptEntitySlice(entities interface{}, fields ...string
 
 	for i := 0; i < rv.Len(); i++ {
 		elem := rv.Index(i)
-		var entity interface{}
+		var entity any
 		// Handle both pointer and non-pointer elements
 		if elem.Kind() == reflect.Ptr {
 			entity = elem.Interface()

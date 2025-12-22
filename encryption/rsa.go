@@ -15,7 +15,7 @@ func ParseRSAPrivateKeyFromPEM(pemData []byte) (*rsa.PrivateKey, error) {
 		return nil, errors.New("failed to decode PEM block")
 	}
 
-	var key interface{}
+	var key any
 	var err error
 
 	switch block.Type {
@@ -52,7 +52,7 @@ func ParseRSAPublicKeyFromPEM(pemData []byte) (*rsa.PublicKey, error) {
 		return nil, errors.New("failed to decode PEM block")
 	}
 
-	var key interface{}
+	var key any
 	var err error
 
 	switch block.Type {

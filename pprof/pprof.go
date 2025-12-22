@@ -11,7 +11,7 @@ import (
 )
 
 // Pprof is a pprof service.
-type Pprof interface{}
+type Pprof any
 
 // PprofImpl is a pprof service implementation.
 type PprofImpl struct{}
