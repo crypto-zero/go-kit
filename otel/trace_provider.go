@@ -40,7 +40,7 @@ func (c *TraceProviderConfig) FromEnv() {
 }
 
 // TraceProvider is an open telemetry trace service.
-type TraceProvider interface{}
+type TraceProvider any
 
 type TraceProviderImpl struct{}
 

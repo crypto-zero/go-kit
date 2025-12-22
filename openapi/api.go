@@ -76,7 +76,7 @@ func GenerateOpenAPI(fs *embed.FS) (out []*OpenAPI, err error) {
 
 // ResolveAPIFile resolves api file
 func ResolveAPIFile(api *OpenAPI, file []byte) error {
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	if err := yaml.Unmarshal(file, &m); err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func ResolveAPIFile(api *OpenAPI, file []byte) error {
 	if !ok {
 		return nil
 	}
-	info, ok := infoNode.(map[string]interface{})
+	info, ok := infoNode.(map[string]any)
 	if !ok {
 		return nil
 	}
@@ -101,17 +101,17 @@ func ResolveAPIFile(api *OpenAPI, file []byte) error {
 	if !ok {
 		return nil
 	}
-	pathMap, ok := paths.(map[string]interface{})
+	pathMap, ok := paths.(map[string]any)
 	if !ok {
 		return nil
 	}
 	for path, pathNode := range pathMap {
-		pathMap, ok := pathNode.(map[string]interface{})
+		pathMap, ok := pathNode.(map[string]any)
 		if !ok {
 			continue
 		}
 		for method, methodNode := range pathMap {
-			methodMap, ok := methodNode.(map[string]interface{})
+			methodMap, ok := methodNode.(map[string]any)
 			if !ok {
 				continue
 			}
@@ -127,7 +127,7 @@ func ResolveAPIFile(api *OpenAPI, file []byte) error {
 			if !ok {
 				continue
 			}
-			tags, ok := tagsNode.([]interface{})
+			tags, ok := tagsNode.([]any)
 			if !ok {
 				continue
 			}

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -130,7 +131,11 @@ func (s *TestMinioSuite) TestPresignedPutObject() {
 	r.NoError(err, "failed to presign put object")
 	r.NotNil(url, "url is nil")
 	r.NotNil(headers, "headers is nil")
-	req, err := http.NewRequest(http.MethodPut, url.String(), bytes.NewReader([]byte(ObjectBody)))
+	urlString := url.String()
+	urlString = strings.Replace(urlString, "staging-dowhat.oss-cn-shenzhen.aliyuncs.com", "staging-app-storage-bucket.dowhat.me", 1)
+
+	s.T().Log("urlString: ", urlString)
+	req, err := http.NewRequest(http.MethodPut, urlString, bytes.NewReader([]byte(ObjectBody)))
 	r.NoError(err, "failed to create put request")
 	req.Header = headers
 	req.Body = io.NopCloser(bytes.NewReader([]byte(ObjectBody)))
