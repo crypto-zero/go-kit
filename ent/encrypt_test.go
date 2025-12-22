@@ -439,14 +439,14 @@ func TestEncryptDecrypt_Format(t *testing.T) {
 
 	// Check minimum length: encrypted data + auth tag (16 bytes)
 	// Note: nonce is NOT included in ciphertext
-	minLength := 16 // GCM auth tag is 16 bytes
+	minLength := encryptor.gcm.Overhead() // GCM auth tag is 16 bytes
 	if len(ciphertextBytes) < minLength {
 		t.Errorf("Ciphertext too short: got %d bytes, want at least %d", len(ciphertextBytes), minLength)
 	}
 
 	// Verify ciphertext does not start with nonce (nonce is not included)
 	// The ciphertext should be shorter than if it included nonce
-	expectedLengthWithNonce := encryptor.nonceSize + len(plaintext) + 16
+	expectedLengthWithNonce := encryptor.nonceSize + len(plaintext) + encryptor.gcm.Overhead()
 	if len(ciphertextBytes) >= expectedLengthWithNonce {
 		t.Errorf("Ciphertext length suggests nonce might be included: got %d bytes, expected less than %d",
 			len(ciphertextBytes), expectedLengthWithNonce)

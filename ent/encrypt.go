@@ -125,7 +125,7 @@ func (e *EntEncryptor) Decrypt(ciphertext string) (string, error) {
 	}
 
 	// Minimum length check: GCM auth tag is 16 bytes
-	minLength := 16
+	minLength := e.gcm.Overhead()
 	if len(ciphertextBytes) < minLength {
 		return "", errors.New("ciphertext too short")
 	}
