@@ -1,7 +1,6 @@
 package ent
 
 import (
-	"bytes"
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
@@ -106,17 +105,14 @@ func (e *EntEncryptor) Encrypt(plaintext string) (string, error) {
 		return "", nil
 	}
 	// Encrypt
-	// Manually prepend nonce to the ciphertext
-	// gcm.Seal does not include nonce in the output, so we need to prepend it
-	dst := make([]byte, e.nonceSize)
-	copy(dst, e.nonce)
-	ciphertext := e.gcm.Seal(dst, e.nonce, []byte(plaintext), nil)
+	// Note: nonce is not included in the ciphertext (using fixed nonce derived from key)
+	ciphertext := e.gcm.Seal(nil, e.nonce, []byte(plaintext), nil)
 	// Return base64-encoded ciphertext
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
 // Decrypt decrypts base64-encoded ciphertext and returns plaintext.
-// ciphertext: base64-encoded encrypted string
+// ciphertext: base64-encoded encrypted string (does not include nonce)
 func (e *EntEncryptor) Decrypt(ciphertext string) (string, error) {
 	if ciphertext == "" {
 		return "", nil
@@ -128,20 +124,13 @@ func (e *EntEncryptor) Decrypt(ciphertext string) (string, error) {
 		return "", fmt.Errorf("failed to decode base64: %w", err)
 	}
 
-	if len(ciphertextBytes) < e.nonceSize {
+	// Minimum length check: GCM auth tag is 16 bytes
+	minLength := 16
+	if len(ciphertextBytes) < minLength {
 		return "", errors.New("ciphertext too short")
 	}
 
-	// Extract nonce and ciphertext
-	nonceFromCiphertext := ciphertextBytes[:e.nonceSize]
-	ciphertextBytes = ciphertextBytes[e.nonceSize:]
-
-	// Verify nonce matches (ensure data integrity)
-	if !bytes.Equal(nonceFromCiphertext, e.nonce) {
-		return "", errors.New("nonce mismatch: ciphertext may be corrupted or from different encryptor")
-	}
-
-	// Decrypt using the fixed nonce
+	// Decrypt using the fixed nonce (nonce is not included in ciphertext)
 	plaintext, err := e.gcm.Open(nil, e.nonce, ciphertextBytes, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to decrypt: %w", err)
