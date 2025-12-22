@@ -19,11 +19,10 @@ import (
 )
 
 // EntEncryptor provides symmetric encryption functionality using AES-GCM mode.
-// It uses deterministic encryption (same plaintext = same ciphertext) to support database JOIN operations.
 type EntEncryptor struct {
 	key       []byte
 	gcm       cipher.AEAD // Cache GCM instance for performance
-	nonce     []byte      // Cache nonce for performance
+	nonce     []byte      // Fixed nonce derived from key (WARNING: all encryptions use the same nonce)
 	nonceSize int         // Cache nonce size for performance
 }
 
@@ -97,9 +96,10 @@ func NewEncryptorFromRSAEncryptedKey(encryptedKey string, privateKey *rsa.Privat
 	return NewEncryptor(string(decryptedKey))
 }
 
-// Encrypt encrypts a string deterministically and returns base64-encoded ciphertext.
-// WARNING: The same plaintext with the same key will always produce the same ciphertext.
-// This allows JOIN operations but reveals when the same data is encrypted.
+// Encrypt encrypts a string using a fixed nonce (derived from key only).
+// WARNING: All encryptions use the same nonce, which is a security risk.
+// The same plaintext with the same key will always produce the same ciphertext,
+// which allows JOIN operations but reveals when the same data is encrypted.
 // plaintext: the string to encrypt
 func (e *EntEncryptor) Encrypt(plaintext string) (string, error) {
 	if plaintext == "" {
@@ -128,11 +128,11 @@ func (e *EntEncryptor) Decrypt(ciphertext string) (string, error) {
 		return "", errors.New("ciphertext too short")
 	}
 
-	// Extract nonce and ciphertext
-	nonce, ciphertextBytes := ciphertextBytes[:e.nonceSize], ciphertextBytes[e.nonceSize:]
+	// Extract ciphertext (skip the nonce prefix, since we use fixed nonce)
+	ciphertextBytes = ciphertextBytes[e.nonceSize:]
 
-	// Decrypt
-	plaintext, err := e.gcm.Open(nil, nonce, ciphertextBytes, nil)
+	// Decrypt using the fixed nonce
+	plaintext, err := e.gcm.Open(nil, e.nonce, ciphertextBytes, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to decrypt: %w", err)
 	}
@@ -173,7 +173,6 @@ func (e *EntEncryptor) encryptStringField(fieldName string, value any) (string, 
 // It encrypts specified string fields before saving (using deterministic encryption, supports JOIN queries).
 // fields: list of field names to encrypt, if empty, no fields will be encrypted.
 func (e *EntEncryptor) EncryptHook(fields ...string) ent.Hook {
-	encryptor := e
 	fieldSet := newFieldSet(fields)
 	if len(fieldSet) == 0 {
 		// No fields to encrypt, return a no-op hook
@@ -191,7 +190,7 @@ func (e *EntEncryptor) EncryptHook(fields ...string) ent.Hook {
 					continue // Field doesn't exist or not set, skip
 				}
 
-				encrypted, err := encryptor.encryptStringField(fieldName, value)
+				encrypted, err := e.encryptStringField(fieldName, value)
 				if err != nil {
 					return nil, err
 				}
@@ -206,23 +205,46 @@ func (e *EntEncryptor) EncryptHook(fields ...string) ent.Hook {
 	}
 }
 
-// snakeToPascal converts snake_case to PascalCase.
-// Example: "phone_country_code" -> "PhoneCountryCode"
-func snakeToPascal(s string) string {
-	if s == "" {
-		return s
+// findFieldByJSONTag finds a struct field by its JSON tag name.
+// Returns an invalid reflect.Value if not found.
+func (e *EntEncryptor) findFieldByJSONTag(rv reflect.Value, jsonTagName string) reflect.Value {
+	if !rv.IsValid() {
+		return reflect.Value{}
 	}
+	// dereference pointer
+	for rv.Kind() == reflect.Pointer {
+		if rv.IsNil() {
+			return reflect.Value{}
+		}
+		rv = rv.Elem()
+	}
+	if rv.Kind() != reflect.Struct {
+		return reflect.Value{}
+	}
+	rt := rv.Type()
+	for i := 0; i < rt.NumField(); i++ {
+		fieldType := rt.Field(i)
+		fieldValue := rv.Field(i)
+		// handle anonymous nested struct
+		if fieldType.Anonymous && fieldValue.Kind() == reflect.Struct {
+			if v := e.findFieldByJSONTag(fieldValue, jsonTagName); v.IsValid() {
+				return v
+			}
+		}
+		tag := fieldType.Tag.Get("json")
+		if tag == "-" {
+			continue
+		}
+		jsonName, _, _ := strings.Cut(tag, ",")
+		if jsonName == "" {
+			jsonName = fieldType.Name
+		}
 
-	parts := strings.Split(s, "_")
-	var result strings.Builder
-	for _, part := range parts {
-		if len(part) > 0 {
-			runes := []rune(part)
-			runes[0] = unicode.ToUpper(runes[0])
-			result.WriteString(string(runes))
+		if jsonName == jsonTagName {
+			return fieldValue
 		}
 	}
-	return result.String()
+	return reflect.Value{}
 }
 
 // decryptStructField decrypts a single field in a struct using reflection.
@@ -241,10 +263,9 @@ func (e *EntEncryptor) decryptStructField(rv reflect.Value, fieldName string) er
 		}
 	}
 
-	// If still not found, try converting snake_case to PascalCase
-	if !field.IsValid() && strings.Contains(fieldName, "_") {
-		pascalCase := snakeToPascal(fieldName)
-		field = rv.FieldByName(pascalCase)
+	// If still not found, try matching by JSON tag
+	if !field.IsValid() {
+		field = e.findFieldByJSONTag(rv, fieldName)
 	}
 
 	if !field.IsValid() || !field.CanSet() {
@@ -331,7 +352,6 @@ func (e *EntEncryptor) DecryptEntitySlice(entities any, fields ...string) error 
 // Works with any ent entity. Automatically handles single entities and slices.
 // fields: list of field names to decrypt
 func (e *EntEncryptor) DecryptInterceptor(fields ...string) ent.Interceptor {
-	encryptor := e
 	fieldSet := newFieldSet(fields)
 	if len(fieldSet) == 0 {
 		// No fields to decrypt, return a no-op interceptor
@@ -362,12 +382,12 @@ func (e *EntEncryptor) DecryptInterceptor(fields ...string) ent.Interceptor {
 			switch rv.Kind() {
 			case reflect.Ptr:
 				// Single entity
-				if err := encryptor.DecryptEntity(value, fieldSlice...); err != nil {
+				if err := e.DecryptEntity(value, fieldSlice...); err != nil {
 					return nil, err
 				}
 			case reflect.Slice:
 				// Entity slice
-				if err := encryptor.DecryptEntitySlice(value, fieldSlice...); err != nil {
+				if err := e.DecryptEntitySlice(value, fieldSlice...); err != nil {
 					return nil, err
 				}
 			default:
