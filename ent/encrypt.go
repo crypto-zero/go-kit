@@ -1,6 +1,7 @@
 package ent
 
 import (
+	"bytes"
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
@@ -13,7 +14,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"unicode"
 
 	"entgo.io/ent"
 )
@@ -106,7 +106,11 @@ func (e *EntEncryptor) Encrypt(plaintext string) (string, error) {
 		return "", nil
 	}
 	// Encrypt
-	ciphertext := e.gcm.Seal(e.nonce, e.nonce, []byte(plaintext), nil)
+	// Manually prepend nonce to the ciphertext
+	// gcm.Seal does not include nonce in the output, so we need to prepend it
+	dst := make([]byte, e.nonceSize)
+	copy(dst, e.nonce)
+	ciphertext := e.gcm.Seal(dst, e.nonce, []byte(plaintext), nil)
 	// Return base64-encoded ciphertext
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
@@ -128,8 +132,14 @@ func (e *EntEncryptor) Decrypt(ciphertext string) (string, error) {
 		return "", errors.New("ciphertext too short")
 	}
 
-	// Extract ciphertext (skip the nonce prefix, since we use fixed nonce)
+	// Extract nonce and ciphertext
+	nonceFromCiphertext := ciphertextBytes[:e.nonceSize]
 	ciphertextBytes = ciphertextBytes[e.nonceSize:]
+
+	// Verify nonce matches (ensure data integrity)
+	if !bytes.Equal(nonceFromCiphertext, e.nonce) {
+		return "", errors.New("nonce mismatch: ciphertext may be corrupted or from different encryptor")
+	}
 
 	// Decrypt using the fixed nonce
 	plaintext, err := e.gcm.Open(nil, e.nonce, ciphertextBytes, nil)
@@ -251,17 +261,6 @@ func (e *EntEncryptor) findFieldByJSONTag(rv reflect.Value, jsonTagName string) 
 func (e *EntEncryptor) decryptStructField(rv reflect.Value, fieldName string) error {
 	// Try exact match first
 	field := rv.FieldByName(fieldName)
-
-	// If not found, try with first letter capitalized (Go exported field convention)
-	if !field.IsValid() && len(fieldName) > 0 {
-		// Convert first letter to uppercase
-		runes := []rune(fieldName)
-		if len(runes) > 0 && unicode.IsLower(runes[0]) {
-			runes[0] = unicode.ToUpper(runes[0])
-			capitalized := string(runes)
-			field = rv.FieldByName(capitalized)
-		}
-	}
 
 	// If still not found, try matching by JSON tag
 	if !field.IsValid() {
