@@ -151,35 +151,6 @@ func (e *EntEncryptor) Decrypt(ciphertext string) (string, error) {
 	return string(plaintext), nil
 }
 
-// fieldSet is a helper type for fast field name lookup
-type fieldSet map[string]struct{}
-
-// newFieldSet creates a fieldSet from a slice of field names, filtering out empty strings.
-func newFieldSet(fields []string) fieldSet {
-	set := make(fieldSet, len(fields))
-	for _, f := range fields {
-		if f != "" {
-			set[f] = struct{}{}
-		}
-	}
-	return set
-}
-
-// encryptStringField encrypts a string field value if it's a non-empty string.
-// Returns empty string if the value should be skipped (non-string, empty, etc.)
-func (e *EntEncryptor) encryptStringField(fieldName string, value any) (string, error) {
-	strValue, ok := value.(string)
-	if !ok || strValue == "" {
-		return "", nil // Skip non-string or empty values
-	}
-
-	encrypted, err := e.Encrypt(strValue)
-	if err != nil {
-		return "", fmt.Errorf("encrypt field %s failed: %w", fieldName, err)
-	}
-	return encrypted, nil
-}
-
 // EncryptedString is a string type that automatically encrypts on write and decrypts on read.
 // It implements driver.Valuer and sql.Scanner interfaces for database operations.
 //
