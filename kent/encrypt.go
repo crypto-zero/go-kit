@@ -483,7 +483,7 @@ func MustEncryptedString(plaintext string) *EncryptedString {
 
 // Value implements driver.Valuer interface - called when writing to database.
 // Encrypts the plaintext value before storing.
-func (e EncryptedString) Value() (driver.Value, error) {
+func (e *EncryptedString) Value() (driver.Value, error) {
 	encryptor := e.encryptor
 	if encryptor == nil {
 		encryptor = defaultEncryptor
