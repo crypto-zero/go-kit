@@ -431,7 +431,7 @@ func (e *EntEncryptor) DecryptInterceptor(fields ...string) ent.Interceptor {
 //	encryptor, _ := NewEncryptor("my-secret-key")
 //	SetDefaultEncryptor(encryptor)
 //
-//	// Create - simplified usage with MustEncryptedString() function
+//	// Create - using MustEncryptedString() helper
 //	user, err := client.User.Create().
 //	    SetEmail(MustEncryptedString("user@example.com")).  // Automatically encrypted
 //	    Save(ctx)
@@ -447,16 +447,15 @@ func (e *EntEncryptor) DecryptInterceptor(fields ...string) ent.Interceptor {
 //	    return err
 //	}
 //	user, err := client.User.Create().
-//	    SetEmail(email).
+//	    SetEmail(email).  // email is already *EncryptedString
 //	    Save(ctx)
 //
 //	// Read - automatically decrypted
 //	fmt.Println(user.Email.String())  // Returns plaintext
 //
-// If you don't want to use the global encryptor:
-//
+//	// Direct usage without helper
 //	user, err := client.User.Create().
-//	    SetEmail(NewEncryptedString("user@example.com", encryptor)).
+//	    SetEmail(&EncryptedString{Plaintext: "user@example.com"}).
 //	    Save(ctx)
 type EncryptedString struct {
 	Plaintext string        // Plaintext value
@@ -465,11 +464,11 @@ type EncryptedString struct {
 
 // NewEncryptedString creates a new EncryptedString using the global default encryptor.
 // Returns error if no default encryptor is set.
-func NewEncryptedString(plaintext string) (EncryptedString, error) {
+func NewEncryptedString(plaintext string) (*EncryptedString, error) {
 	if defaultEncryptor == nil {
-		return EncryptedString{}, errors.New("default encryptor is nil, call SetDefaultEncryptor() first")
+		return nil, errors.New("default encryptor is nil, call SetDefaultEncryptor() first")
 	}
-	return EncryptedString{
+	return &EncryptedString{
 		Plaintext: plaintext,
 		encryptor: defaultEncryptor,
 	}, nil
@@ -477,7 +476,7 @@ func NewEncryptedString(plaintext string) (EncryptedString, error) {
 
 // MustEncryptedString creates a new EncryptedString using the global default encryptor.
 // Panics if no default encryptor is set.
-func MustEncryptedString(plaintext string) EncryptedString {
+func MustEncryptedString(plaintext string) *EncryptedString {
 	encrypted, err := NewEncryptedString(plaintext)
 	if err != nil {
 		panic(err)
