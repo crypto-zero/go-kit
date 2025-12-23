@@ -1,4 +1,4 @@
-package ent
+package kent
 
 import (
 	"crypto/rand"
