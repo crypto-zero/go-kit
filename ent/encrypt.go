@@ -451,7 +451,7 @@ func (e *EntEncryptor) DecryptInterceptor(fields ...string) ent.Interceptor {
 //	    Save(ctx)
 //
 //	// Read - automatically decrypted
-//	fmt.Println(user.Email.String())  // Returns plaintext
+//	fmt.Println(user.Email.Plaintext)  // Returns plaintext
 //
 //	// Direct usage without helper
 //	user, err := client.User.Create().
@@ -529,9 +529,4 @@ func (e *EncryptedString) Scan(src any) error {
 	e.Plaintext = decrypted
 	e.encryptor = encryptor // Cache the encryptor for subsequent operations
 	return nil
-}
-
-// String returns the plaintext value.
-func (e EncryptedString) String() string {
-	return e.Plaintext
 }

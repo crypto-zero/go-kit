@@ -489,8 +489,8 @@ func TestEncryptedString(t *testing.T) {
 			t.Fatalf("Scan() error = %v", err)
 		}
 
-		if scanned.String() != plaintext {
-			t.Errorf("Scan() plaintext = %q, want %q", scanned.String(), plaintext)
+		if scanned.Plaintext != plaintext {
+			t.Errorf("Scan() plaintext = %q, want %q", scanned.Plaintext, plaintext)
 		}
 	})
 
@@ -517,8 +517,8 @@ func TestEncryptedString(t *testing.T) {
 			t.Fatalf("Scan() error = %v", err)
 		}
 
-		if scanned.String() != plaintext {
-			t.Errorf("Scan() plaintext = %q, want %q", scanned.String(), plaintext)
+		if scanned.Plaintext != plaintext {
+			t.Errorf("Scan() plaintext = %q, want %q", scanned.Plaintext, plaintext)
 		}
 	})
 
@@ -559,12 +559,12 @@ func TestEncryptedString(t *testing.T) {
 				}
 
 				if tc.src == nil {
-					if scanned.String() != "" {
-						t.Errorf("Scan(nil) should result in empty string, got %q", scanned.String())
+					if scanned.Plaintext != "" {
+						t.Errorf("Scan(nil) should result in empty string, got %q", scanned.Plaintext)
 					}
 				} else {
-					if scanned.String() != plaintext {
-						t.Errorf("Scan() plaintext = %q, want %q", scanned.String(), plaintext)
+					if scanned.Plaintext != plaintext {
+						t.Errorf("Scan() plaintext = %q, want %q", scanned.Plaintext, plaintext)
 					}
 				}
 			})
@@ -585,8 +585,8 @@ func TestEncryptedString(t *testing.T) {
 			Plaintext: "test",
 			encryptor: encryptor,
 		}
-		if encrypted.String() != "test" {
-			t.Errorf("String() = %q, want %q", encrypted.String(), "test")
+		if encrypted.Plaintext != "test" {
+			t.Errorf("Plaintext = %q, want %q", encrypted.Plaintext, "test")
 		}
 	})
 }
@@ -612,8 +612,8 @@ func TestMustEncryptedString(t *testing.T) {
 	plaintext := "test@example.com"
 	encrypted := MustEncryptedString(plaintext)
 
-	if encrypted.String() != plaintext {
-		t.Errorf("MustEncryptedString() plaintext = %q, want %q", encrypted.String(), plaintext)
+	if encrypted.Plaintext != plaintext {
+		t.Errorf("MustEncryptedString() plaintext = %q, want %q", encrypted.Plaintext, plaintext)
 	}
 }
 
