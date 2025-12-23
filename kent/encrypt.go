@@ -451,14 +451,11 @@ func (e *EntEncryptor) DecryptInterceptor(fields ...string) ent.Interceptor {
 //	    Save(ctx)
 //
 //	// Read - automatically decrypted
-//	fmt.Println(user.Email.Plaintext)  // Returns plaintext
+//	fmt.Println(user.Email.String())  // Returns plaintext
 //
-//	// Direct usage without helper
-//	user, err := client.User.Create().
-//	    SetEmail(&EncryptedString{Plaintext: "user@example.com"}).
-//	    Save(ctx)
+//	// Note: plaintext field is private, use NewEncryptedString() or MustEncryptedString() helpers
 type EncryptedString struct {
-	Plaintext string        // Plaintext value
+	plaintext string        // plaintext value (private field, use String() to access)
 	encryptor *EntEncryptor // Encryptor instance for encryption/decryption
 }
 
@@ -469,7 +466,7 @@ func NewEncryptedString(plaintext string) (*EncryptedString, error) {
 		return nil, errors.New("default encryptor is nil, call SetDefaultEncryptor() first")
 	}
 	return &EncryptedString{
-		Plaintext: plaintext,
+		plaintext: plaintext,
 		encryptor: defaultEncryptor,
 	}, nil
 }
@@ -494,7 +491,7 @@ func (e EncryptedString) Value() (driver.Value, error) {
 	if encryptor == nil {
 		return nil, ErrNoEncryptor
 	}
-	return encryptor.Encrypt(e.Plaintext)
+	return encryptor.Encrypt(e.plaintext)
 }
 
 // Scan implements sql.Scanner interface - called when reading from database.
@@ -515,7 +512,7 @@ func (e *EncryptedString) Scan(src any) error {
 	case []byte:
 		ciphertext = string(v)
 	case nil:
-		e.Plaintext = ""
+		e.plaintext = ""
 		return nil
 	default:
 		return fmt.Errorf("unsupported type for EncryptedString: %T", src)
@@ -526,7 +523,12 @@ func (e *EncryptedString) Scan(src any) error {
 		return fmt.Errorf("failed to decrypt: %w", err)
 	}
 
-	e.Plaintext = decrypted
+	e.plaintext = decrypted
 	e.encryptor = encryptor // Cache the encryptor for subsequent operations
 	return nil
+}
+
+// String returns the plaintext value.
+func (e *EncryptedString) String() string {
+	return e.plaintext
 }

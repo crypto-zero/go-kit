@@ -461,8 +461,8 @@ func TestEncryptedString(t *testing.T) {
 
 	t.Run("basic usage", func(t *testing.T) {
 		plaintext := "user@example.com"
-		encrypted := EncryptedString{
-			Plaintext: plaintext,
+		encrypted := &EncryptedString{
+			plaintext: plaintext,
 			encryptor: encryptor,
 		}
 
@@ -489,8 +489,8 @@ func TestEncryptedString(t *testing.T) {
 			t.Fatalf("Scan() error = %v", err)
 		}
 
-		if scanned.Plaintext != plaintext {
-			t.Errorf("Scan() plaintext = %q, want %q", scanned.Plaintext, plaintext)
+		if scanned.String() != plaintext {
+			t.Errorf("Scan() plaintext = %q, want %q", scanned.String(), plaintext)
 		}
 	})
 
@@ -517,13 +517,18 @@ func TestEncryptedString(t *testing.T) {
 			t.Fatalf("Scan() error = %v", err)
 		}
 
-		if scanned.Plaintext != plaintext {
-			t.Errorf("Scan() plaintext = %q, want %q", scanned.Plaintext, plaintext)
+		if scanned.String() != plaintext {
+			t.Errorf("Scan() plaintext = %q, want %q", scanned.String(), plaintext)
 		}
 	})
 
 	t.Run("nil encryptor error", func(t *testing.T) {
-		encrypted := EncryptedString{Plaintext: "test"}
+		// Temporarily clear default encryptor
+		oldDefault := GetDefaultEncryptor()
+		SetDefaultEncryptor(nil)
+		defer SetDefaultEncryptor(oldDefault)
+
+		encrypted := &EncryptedString{plaintext: "test"}
 
 		_, err := encrypted.Value()
 		if err == nil {
@@ -559,12 +564,12 @@ func TestEncryptedString(t *testing.T) {
 				}
 
 				if tc.src == nil {
-					if scanned.Plaintext != "" {
-						t.Errorf("Scan(nil) should result in empty string, got %q", scanned.Plaintext)
+					if scanned.String() != "" {
+						t.Errorf("Scan(nil) should result in empty string, got %q", scanned.String())
 					}
 				} else {
-					if scanned.Plaintext != plaintext {
-						t.Errorf("Scan() plaintext = %q, want %q", scanned.Plaintext, plaintext)
+					if scanned.String() != plaintext {
+						t.Errorf("Scan() plaintext = %q, want %q", scanned.String(), plaintext)
 					}
 				}
 			})
@@ -581,12 +586,15 @@ func TestEncryptedString(t *testing.T) {
 	})
 
 	t.Run("String() method", func(t *testing.T) {
-		encrypted := EncryptedString{
-			Plaintext: "test",
-			encryptor: encryptor,
+		SetDefaultEncryptor(encryptor)
+		defer SetDefaultEncryptor(nil)
+
+		encrypted, err := NewEncryptedString("test")
+		if err != nil {
+			t.Fatalf("NewEncryptedString() error = %v", err)
 		}
-		if encrypted.Plaintext != "test" {
-			t.Errorf("Plaintext = %q, want %q", encrypted.Plaintext, "test")
+		if encrypted.String() != "test" {
+			t.Errorf("String() = %q, want %q", encrypted.String(), "test")
 		}
 	})
 }
@@ -612,8 +620,8 @@ func TestMustEncryptedString(t *testing.T) {
 	plaintext := "test@example.com"
 	encrypted := MustEncryptedString(plaintext)
 
-	if encrypted.Plaintext != plaintext {
-		t.Errorf("MustEncryptedString() plaintext = %q, want %q", encrypted.Plaintext, plaintext)
+	if encrypted.String() != plaintext {
+		t.Errorf("MustEncryptedString() plaintext = %q, want %q", encrypted.String(), plaintext)
 	}
 }
 
