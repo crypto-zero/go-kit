@@ -452,3 +452,179 @@ func TestEncryptDecrypt_Format(t *testing.T) {
 			len(ciphertextBytes), expectedLengthWithNonce)
 	}
 }
+
+func TestEncryptedString(t *testing.T) {
+	encryptor, err := NewEncryptor("my-secret-key-32-bytes-long!!")
+	if err != nil {
+		t.Fatalf("Failed to create encryptor: %v", err)
+	}
+
+	t.Run("basic usage", func(t *testing.T) {
+		plaintext := "user@example.com"
+		encrypted := EncryptedString{
+			Plaintext: plaintext,
+			encryptor: encryptor,
+		}
+
+		// Test Value() - encryption
+		value, err := encrypted.Value()
+		if err != nil {
+			t.Fatalf("Value() error = %v", err)
+		}
+
+		valueStr, ok := value.(string)
+		if !ok {
+			t.Fatalf("Value() returned non-string type: %T", value)
+		}
+
+		if valueStr == plaintext {
+			t.Error("Value() should return encrypted value, not plaintext")
+		}
+
+		// Test Scan() - decryption
+		var scanned EncryptedString
+		scanned.encryptor = encryptor
+		err = scanned.Scan(valueStr)
+		if err != nil {
+			t.Fatalf("Scan() error = %v", err)
+		}
+
+		if scanned.String() != plaintext {
+			t.Errorf("Scan() plaintext = %q, want %q", scanned.String(), plaintext)
+		}
+	})
+
+	t.Run("with global encryptor", func(t *testing.T) {
+		SetDefaultEncryptor(encryptor)
+		defer SetDefaultEncryptor(nil)
+
+		plaintext := "test@example.com"
+		encrypted, err := NewEncryptedString(plaintext)
+		if err != nil {
+			t.Fatalf("NewEncryptedString() error = %v", err)
+		}
+
+		// Test Value() with default encryptor
+		value, err := encrypted.Value()
+		if err != nil {
+			t.Fatalf("Value() error = %v", err)
+		}
+
+		// Test Scan() with default encryptor
+		var scanned EncryptedString
+		err = scanned.Scan(value)
+		if err != nil {
+			t.Fatalf("Scan() error = %v", err)
+		}
+
+		if scanned.String() != plaintext {
+			t.Errorf("Scan() plaintext = %q, want %q", scanned.String(), plaintext)
+		}
+	})
+
+	t.Run("nil encryptor error", func(t *testing.T) {
+		encrypted := EncryptedString{Plaintext: "test"}
+
+		_, err := encrypted.Value()
+		if err == nil {
+			t.Error("Value() should return error when encryptor is nil and no default set")
+		}
+
+		err = encrypted.Scan("test")
+		if err == nil {
+			t.Error("Scan() should return error when encryptor is nil and no default set")
+		}
+	})
+
+	t.Run("scan different types", func(t *testing.T) {
+		plaintext := "test"
+		ciphertext, _ := encryptor.Encrypt(plaintext)
+
+		testCases := []struct {
+			name string
+			src  any
+		}{
+			{"string", ciphertext},
+			{"[]byte", []byte(ciphertext)},
+			{"nil", nil},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				var scanned EncryptedString
+				scanned.encryptor = encryptor
+				err := scanned.Scan(tc.src)
+				if err != nil {
+					t.Fatalf("Scan() error = %v", err)
+				}
+
+				if tc.src == nil {
+					if scanned.String() != "" {
+						t.Errorf("Scan(nil) should result in empty string, got %q", scanned.String())
+					}
+				} else {
+					if scanned.String() != plaintext {
+						t.Errorf("Scan() plaintext = %q, want %q", scanned.String(), plaintext)
+					}
+				}
+			})
+		}
+	})
+
+	t.Run("scan unsupported type", func(t *testing.T) {
+		var scanned EncryptedString
+		scanned.encryptor = encryptor
+		err := scanned.Scan(123)
+		if err == nil {
+			t.Error("Scan() should return error for unsupported type")
+		}
+	})
+
+	t.Run("String() method", func(t *testing.T) {
+		encrypted := EncryptedString{
+			Plaintext: "test",
+			encryptor: encryptor,
+		}
+		if encrypted.String() != "test" {
+			t.Errorf("String() = %q, want %q", encrypted.String(), "test")
+		}
+	})
+}
+
+func TestEncrypted_WithoutDefaultEncryptor(t *testing.T) {
+	SetDefaultEncryptor(nil)
+
+	_, err := NewEncryptedString("test")
+	if err == nil {
+		t.Error("NewEncryptedString() should return error when default encryptor is nil")
+	}
+}
+
+func TestMustEncryptedString(t *testing.T) {
+	encryptor, err := NewEncryptor("my-secret-key-32-bytes-long!!")
+	if err != nil {
+		t.Fatalf("Failed to create encryptor: %v", err)
+	}
+
+	SetDefaultEncryptor(encryptor)
+	defer SetDefaultEncryptor(nil)
+
+	plaintext := "test@example.com"
+	encrypted := MustEncryptedString(plaintext)
+
+	if encrypted.String() != plaintext {
+		t.Errorf("MustEncryptedString() plaintext = %q, want %q", encrypted.String(), plaintext)
+	}
+}
+
+func TestMustEncryptedString_Panic(t *testing.T) {
+	SetDefaultEncryptor(nil)
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("MustEncryptedString() should panic when default encryptor is nil")
+		}
+	}()
+
+	_ = MustEncryptedString("test")
+}

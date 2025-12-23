@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"database/sql/driver"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -16,6 +17,22 @@ import (
 
 	"entgo.io/ent"
 )
+
+var (
+	defaultEncryptor *EntEncryptor
+	// ErrNoEncryptor is returned when no encryptor is available (neither instance nor default).
+	ErrNoEncryptor = errors.New("encryptor is nil and no default encryptor set")
+)
+
+// SetDefaultEncryptor sets the global default encryptor for EncryptedString.
+func SetDefaultEncryptor(encryptor *EntEncryptor) {
+	defaultEncryptor = encryptor
+}
+
+// GetDefaultEncryptor returns the global default encryptor.
+func GetDefaultEncryptor() *EntEncryptor {
+	return defaultEncryptor
+}
 
 // EntEncryptor provides symmetric encryption functionality using AES-GCM mode.
 type EntEncryptor struct {
@@ -386,4 +403,136 @@ func (e *EntEncryptor) DecryptInterceptor(fields ...string) ent.Interceptor {
 			return value, nil
 		})
 	})
+}
+
+// EncryptedString is a string type that automatically encrypts on write and decrypts on read.
+// It implements driver.Valuer and sql.Scanner interfaces for database operations.
+//
+// Usage in Ent schema with GoType (Recommended - supports automatic encryption in WHERE conditions):
+//
+//	type User struct {
+//	    ent.Schema
+//	}
+//
+//	func (User) Fields() []ent.Field {
+//	    return []ent.Field{
+//	        field.String("email").
+//	            GoType(&EncryptedString{}).
+//	            SchemaType(map[string]string{
+//	                "postgres": "text",
+//	                "mysql":    "text",
+//	            }),
+//	    }
+//	}
+//
+// With GoType, WHERE conditions will automatically call Value() to encrypt:
+//
+//	// Setup (once at application startup)
+//	encryptor, _ := NewEncryptor("my-secret-key")
+//	SetDefaultEncryptor(encryptor)
+//
+//	// Create - simplified usage with MustEncryptedString() function
+//	user, err := client.User.Create().
+//	    SetEmail(MustEncryptedString("user@example.com")).  // Automatically encrypted
+//	    Save(ctx)
+//
+//	// Query - WHERE condition automatically encrypts
+//	users, err := client.User.Query().
+//	    Where(user.EmailEQ(MustEncryptedString("user@example.com"))).  // Automatically encrypted!
+//	    All(ctx)
+//
+//	// Or use NewEncryptedString() for error handling
+//	email, err := NewEncryptedString("user@example.com")
+//	if err != nil {
+//	    return err
+//	}
+//	user, err := client.User.Create().
+//	    SetEmail(email).
+//	    Save(ctx)
+//
+//	// Read - automatically decrypted
+//	fmt.Println(user.Email.String())  // Returns plaintext
+//
+// If you don't want to use the global encryptor:
+//
+//	user, err := client.User.Create().
+//	    SetEmail(NewEncryptedString("user@example.com", encryptor)).
+//	    Save(ctx)
+type EncryptedString struct {
+	Plaintext string        // Plaintext value
+	encryptor *EntEncryptor // Encryptor instance for encryption/decryption
+}
+
+// NewEncryptedString creates a new EncryptedString using the global default encryptor.
+// Returns error if no default encryptor is set.
+func NewEncryptedString(plaintext string) (EncryptedString, error) {
+	if defaultEncryptor == nil {
+		return EncryptedString{}, errors.New("default encryptor is nil, call SetDefaultEncryptor() first")
+	}
+	return EncryptedString{
+		Plaintext: plaintext,
+		encryptor: defaultEncryptor,
+	}, nil
+}
+
+// MustEncryptedString creates a new EncryptedString using the global default encryptor.
+// Panics if no default encryptor is set.
+func MustEncryptedString(plaintext string) EncryptedString {
+	encrypted, err := NewEncryptedString(plaintext)
+	if err != nil {
+		panic(err)
+	}
+	return encrypted
+}
+
+// Value implements driver.Valuer interface - called when writing to database.
+// Encrypts the plaintext value before storing.
+func (e EncryptedString) Value() (driver.Value, error) {
+	encryptor := e.encryptor
+	if encryptor == nil {
+		encryptor = defaultEncryptor
+	}
+	if encryptor == nil {
+		return nil, ErrNoEncryptor
+	}
+	return encryptor.Encrypt(e.Plaintext)
+}
+
+// Scan implements sql.Scanner interface - called when reading from database.
+// Decrypts the ciphertext value after reading.
+func (e *EncryptedString) Scan(src any) error {
+	encryptor := e.encryptor
+	if encryptor == nil {
+		encryptor = defaultEncryptor
+	}
+	if encryptor == nil {
+		return ErrNoEncryptor
+	}
+
+	var ciphertext string
+	switch v := src.(type) {
+	case string:
+		ciphertext = v
+	case []byte:
+		ciphertext = string(v)
+	case nil:
+		e.Plaintext = ""
+		return nil
+	default:
+		return fmt.Errorf("unsupported type for EncryptedString: %T", src)
+	}
+
+	decrypted, err := encryptor.Decrypt(ciphertext)
+	if err != nil {
+		return fmt.Errorf("failed to decrypt: %w", err)
+	}
+
+	e.Plaintext = decrypted
+	e.encryptor = encryptor // Cache the encryptor for subsequent operations
+	return nil
+}
+
+// String returns the plaintext value.
+func (e EncryptedString) String() string {
+	return e.Plaintext
 }
