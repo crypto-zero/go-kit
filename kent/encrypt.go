@@ -177,59 +177,41 @@ func (e *EntEncryptor) Decrypt(ciphertext string) (string, error) {
 //	encryptor, _ := NewEncryptor("my-secret-key")
 //	SetDefaultEncryptor(encryptor)
 //
-//	// Create - using MustEncryptedString() helper
+//	// Create - using ES() helper
 //	user, err := client.User.Create().
-//	    SetEmail(MustEncryptedString("user@example.com")).  // Automatically encrypted
+//	    SetEmail(ES("user@example.com")).  // Automatically encrypted
 //	    Save(ctx)
 //
 //	// Query - WHERE condition automatically encrypts
 //	users, err := client.User.Query().
-//	    Where(user.EmailEQ(MustEncryptedString("user@example.com"))).  // Automatically encrypted!
+//	    Where(user.EmailEQ(ES("user@example.com"))).  // Automatically encrypted!
 //	    All(ctx)
-//
-//	// Or use NewEncryptedString() for error handling
-//	email, err := NewEncryptedString("user@example.com")
-//	if err != nil {
-//	    return err
-//	}
-//	user, err := client.User.Create().
-//	    SetEmail(email).  // email is already *EncryptedString
-//	    Save(ctx)
 //
 //	// Read - automatically decrypted
 //	fmt.Println(user.Email.String())  // Returns plaintext
 //
-//	// Note: plaintext field is private, use NewEncryptedString() or MustEncryptedString() helpers
+//	// Note: plaintext field is private, use ES() helper to create EncryptedString
 type EncryptedString struct {
 	plaintext string        // plaintext value (private field, use String() to access)
 	encryptor *EntEncryptor // Encryptor instance for encryption/decryption
 }
 
-// NewEncryptedString creates a new EncryptedString using the global default encryptor.
-// Returns error if no default encryptor is set.
-func NewEncryptedString(plaintext string) (*EncryptedString, error) {
+// ES creates an EncryptedString using the global default encryptor.
+// Panics if no default encryptor is set.
+// For pointer type, use &ES("plaintext").
+func ES(plaintext string) EncryptedString {
 	if defaultEncryptor == nil {
-		return nil, errors.New("default encryptor is nil, call SetDefaultEncryptor() first")
+		panic(errors.New("default encryptor is nil, call SetDefaultEncryptor() first"))
 	}
-	return &EncryptedString{
+	return EncryptedString{
 		plaintext: plaintext,
 		encryptor: defaultEncryptor,
-	}, nil
-}
-
-// MustEncryptedString creates a new EncryptedString using the global default encryptor.
-// Panics if no default encryptor is set.
-func MustEncryptedString(plaintext string) *EncryptedString {
-	encrypted, err := NewEncryptedString(plaintext)
-	if err != nil {
-		panic(err)
 	}
-	return encrypted
 }
 
 // Value implements driver.Valuer interface - called when writing to database.
 // Encrypts the plaintext value before storing.
-func (e *EncryptedString) Value() (driver.Value, error) {
+func (e EncryptedString) Value() (driver.Value, error) {
 	encryptor := e.encryptor
 	if encryptor == nil {
 		encryptor = defaultEncryptor
@@ -275,6 +257,6 @@ func (e *EncryptedString) Scan(src any) error {
 }
 
 // String returns the plaintext value.
-func (e *EncryptedString) String() string {
+func (e EncryptedString) String() string {
 	return e.plaintext
 }

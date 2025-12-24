@@ -499,10 +499,7 @@ func TestEncryptedString(t *testing.T) {
 		defer SetDefaultEncryptor(nil)
 
 		plaintext := "test@example.com"
-		encrypted, err := NewEncryptedString(plaintext)
-		if err != nil {
-			t.Fatalf("NewEncryptedString() error = %v", err)
-		}
+		encrypted := ES(plaintext)
 
 		// Test Value() with default encryptor
 		value, err := encrypted.Value()
@@ -589,26 +586,26 @@ func TestEncryptedString(t *testing.T) {
 		SetDefaultEncryptor(encryptor)
 		defer SetDefaultEncryptor(nil)
 
-		encrypted, err := NewEncryptedString("test")
-		if err != nil {
-			t.Fatalf("NewEncryptedString() error = %v", err)
-		}
+		encrypted := ES("test")
 		if encrypted.String() != "test" {
 			t.Errorf("String() = %q, want %q", encrypted.String(), "test")
 		}
 	})
 }
 
-func TestEncrypted_WithoutDefaultEncryptor(t *testing.T) {
+func TestES_Panic(t *testing.T) {
 	SetDefaultEncryptor(nil)
 
-	_, err := NewEncryptedString("test")
-	if err == nil {
-		t.Error("NewEncryptedString() should return error when default encryptor is nil")
-	}
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("ES() should panic when default encryptor is nil")
+		}
+	}()
+
+	_ = ES("test")
 }
 
-func TestMustEncryptedString(t *testing.T) {
+func TestES(t *testing.T) {
 	encryptor, err := NewEncryptor("my-secret-key-32-bytes-long!!")
 	if err != nil {
 		t.Fatalf("Failed to create encryptor: %v", err)
@@ -618,21 +615,16 @@ func TestMustEncryptedString(t *testing.T) {
 	defer SetDefaultEncryptor(nil)
 
 	plaintext := "test@example.com"
-	encrypted := MustEncryptedString(plaintext)
+	encrypted := ES(plaintext)
 
 	if encrypted.String() != plaintext {
-		t.Errorf("MustEncryptedString() plaintext = %q, want %q", encrypted.String(), plaintext)
+		t.Errorf("ES() plaintext = %q, want %q", encrypted.String(), plaintext)
 	}
-}
 
-func TestMustEncryptedString_Panic(t *testing.T) {
-	SetDefaultEncryptor(nil)
-
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("MustEncryptedString() should panic when default encryptor is nil")
-		}
-	}()
-
-	_ = MustEncryptedString("test")
+	// Test pointer usage
+	es := ES(plaintext)
+	encryptedPtr := &es
+	if encryptedPtr.String() != plaintext {
+		t.Errorf("&ES() plaintext = %q, want %q", encryptedPtr.String(), plaintext)
+	}
 }
