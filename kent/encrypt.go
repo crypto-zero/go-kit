@@ -177,20 +177,22 @@ func (e *EntEncryptor) Decrypt(ciphertext string) (string, error) {
 //	encryptor, _ := NewEncryptor("my-secret-key")
 //	SetDefaultEncryptor(encryptor)
 //
-//	// Create - using ES() helper
+//	// Create - using ESP() helper (returns pointer)
 //	user, err := client.User.Create().
-//	    SetEmail(ES("user@example.com")).  // Automatically encrypted
+//	    SetEmail(ESP("user@example.com")).  // Automatically encrypted
 //	    Save(ctx)
 //
 //	// Query - WHERE condition automatically encrypts
 //	users, err := client.User.Query().
-//	    Where(user.EmailEQ(ES("user@example.com"))).  // Automatically encrypted!
+//	    Where(user.EmailEQ(ESP("user@example.com"))).  // Automatically encrypted!
 //	    All(ctx)
 //
 //	// Read - automatically decrypted
 //	fmt.Println(user.Email.String())  // Returns plaintext
 //
-//	// Note: plaintext field is private, use ES() helper to create EncryptedString
+//	// Helpers:
+//	// - ES("text")  returns EncryptedString  (value type)
+//	// - ESP("text") returns *EncryptedString (pointer type, for ent GoType)
 type EncryptedString struct {
 	plaintext string        // plaintext value (private field, use String() to access)
 	encryptor *EntEncryptor // Encryptor instance for encryption/decryption
@@ -198,7 +200,7 @@ type EncryptedString struct {
 
 // ES creates an EncryptedString using the global default encryptor.
 // Panics if no default encryptor is set.
-// For pointer type, use &ES("plaintext").
+// For pointer type, use ESP() instead.
 func ES(plaintext string) EncryptedString {
 	if defaultEncryptor == nil {
 		panic(errors.New("default encryptor is nil, call SetDefaultEncryptor() first"))
@@ -207,6 +209,14 @@ func ES(plaintext string) EncryptedString {
 		plaintext: plaintext,
 		encryptor: defaultEncryptor,
 	}
+}
+
+// ESP creates a pointer to an EncryptedString using the global default encryptor.
+// Panics if no default encryptor is set.
+// Shorthand for creating *EncryptedString, commonly used with ent GoType.
+func ESP(plaintext string) *EncryptedString {
+	es := ES(plaintext)
+	return &es
 }
 
 // Value implements driver.Valuer interface - called when writing to database.
