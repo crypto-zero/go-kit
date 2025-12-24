@@ -628,3 +628,46 @@ func TestES(t *testing.T) {
 		t.Errorf("&ES() plaintext = %q, want %q", encryptedPtr.String(), plaintext)
 	}
 }
+
+func TestESP(t *testing.T) {
+	encryptor, err := NewEncryptor("my-secret-key-32-bytes-long!!")
+	if err != nil {
+		t.Fatalf("Failed to create encryptor: %v", err)
+	}
+
+	SetDefaultEncryptor(encryptor)
+	defer SetDefaultEncryptor(nil)
+
+	plaintext := "test@example.com"
+	encrypted := ESP(plaintext)
+
+	// Check that ESP returns a pointer
+	if encrypted == nil {
+		t.Fatal("ESP() returned nil")
+	}
+
+	if encrypted.String() != plaintext {
+		t.Errorf("ESP() plaintext = %q, want %q", encrypted.String(), plaintext)
+	}
+
+	// Verify it can be used with driver.Valuer
+	value, err := encrypted.Value()
+	if err != nil {
+		t.Errorf("ESP().Value() error = %v", err)
+	}
+	if value == "" {
+		t.Error("ESP().Value() returned empty string")
+	}
+}
+
+func TestESP_Panic(t *testing.T) {
+	SetDefaultEncryptor(nil)
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("ESP() should panic when default encryptor is nil")
+		}
+	}()
+
+	_ = ESP("test")
+}
