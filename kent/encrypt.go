@@ -194,7 +194,7 @@ func (e *EntEncryptor) Decrypt(ciphertext string) (string, error) {
 //	// - ES("text")  returns EncryptedString  (value type)
 //	// - ESP("text") returns *EncryptedString (pointer type, for ent GoType)
 type EncryptedString struct {
-	plaintext string        // plaintext value (private field, use String() to access)
+	Plaintext string        // Plaintext value (public field for direct access)
 	encryptor *EntEncryptor // Encryptor instance for encryption/decryption
 }
 
@@ -206,7 +206,7 @@ func ES(plaintext string) EncryptedString {
 		panic(errors.New("default encryptor is nil, call SetDefaultEncryptor() first"))
 	}
 	return EncryptedString{
-		plaintext: plaintext,
+		Plaintext: plaintext,
 		encryptor: defaultEncryptor,
 	}
 }
@@ -229,7 +229,7 @@ func (e EncryptedString) Value() (driver.Value, error) {
 	if encryptor == nil {
 		return nil, ErrNoEncryptor
 	}
-	return encryptor.Encrypt(e.plaintext)
+	return encryptor.Encrypt(e.Plaintext)
 }
 
 // Scan implements sql.Scanner interface - called when reading from database.
@@ -250,7 +250,7 @@ func (e *EncryptedString) Scan(src any) error {
 	case []byte:
 		ciphertext = string(v)
 	case nil:
-		e.plaintext = ""
+		e.Plaintext = ""
 		return nil
 	default:
 		return fmt.Errorf("unsupported type for EncryptedString: %T", src)
@@ -261,12 +261,12 @@ func (e *EncryptedString) Scan(src any) error {
 		return fmt.Errorf("failed to decrypt: %w", err)
 	}
 
-	e.plaintext = decrypted
+	e.Plaintext = decrypted
 	e.encryptor = encryptor // Cache the encryptor for subsequent operations
 	return nil
 }
 
 // String returns the plaintext value.
 func (e EncryptedString) String() string {
-	return e.plaintext
+	return "*"
 }

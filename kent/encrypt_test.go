@@ -462,7 +462,7 @@ func TestEncryptedString(t *testing.T) {
 	t.Run("basic usage", func(t *testing.T) {
 		plaintext := "user@example.com"
 		encrypted := &EncryptedString{
-			plaintext: plaintext,
+			Plaintext: plaintext,
 			encryptor: encryptor,
 		}
 
@@ -489,8 +489,8 @@ func TestEncryptedString(t *testing.T) {
 			t.Fatalf("Scan() error = %v", err)
 		}
 
-		if scanned.String() != plaintext {
-			t.Errorf("Scan() plaintext = %q, want %q", scanned.String(), plaintext)
+		if scanned.Plaintext != plaintext {
+			t.Errorf("Scan() plaintext = %q, want %q", scanned.Plaintext, plaintext)
 		}
 	})
 
@@ -514,8 +514,8 @@ func TestEncryptedString(t *testing.T) {
 			t.Fatalf("Scan() error = %v", err)
 		}
 
-		if scanned.String() != plaintext {
-			t.Errorf("Scan() plaintext = %q, want %q", scanned.String(), plaintext)
+		if scanned.Plaintext != plaintext {
+			t.Errorf("Scan() plaintext = %q, want %q", scanned.Plaintext, plaintext)
 		}
 	})
 
@@ -525,7 +525,7 @@ func TestEncryptedString(t *testing.T) {
 		SetDefaultEncryptor(nil)
 		defer SetDefaultEncryptor(oldDefault)
 
-		encrypted := &EncryptedString{plaintext: "test"}
+		encrypted := &EncryptedString{Plaintext: "test"}
 
 		_, err := encrypted.Value()
 		if err == nil {
@@ -561,12 +561,12 @@ func TestEncryptedString(t *testing.T) {
 				}
 
 				if tc.src == nil {
-					if scanned.String() != "" {
-						t.Errorf("Scan(nil) should result in empty string, got %q", scanned.String())
+					if scanned.Plaintext != "" {
+						t.Errorf("Scan(nil) should result in empty string, got %q", scanned.Plaintext)
 					}
 				} else {
-					if scanned.String() != plaintext {
-						t.Errorf("Scan() plaintext = %q, want %q", scanned.String(), plaintext)
+					if scanned.Plaintext != plaintext {
+						t.Errorf("Scan() plaintext = %q, want %q", scanned.Plaintext, plaintext)
 					}
 				}
 			})
@@ -587,8 +587,8 @@ func TestEncryptedString(t *testing.T) {
 		defer SetDefaultEncryptor(nil)
 
 		encrypted := ES("test")
-		if encrypted.String() != "test" {
-			t.Errorf("String() = %q, want %q", encrypted.String(), "test")
+		if encrypted.Plaintext != "test" {
+			t.Errorf("String() = %q, want %q", encrypted.Plaintext, "test")
 		}
 	})
 }
@@ -617,15 +617,15 @@ func TestES(t *testing.T) {
 	plaintext := "test@example.com"
 	encrypted := ES(plaintext)
 
-	if encrypted.String() != plaintext {
-		t.Errorf("ES() plaintext = %q, want %q", encrypted.String(), plaintext)
+	if encrypted.Plaintext != plaintext {
+		t.Errorf("ES() plaintext = %q, want %q", encrypted.Plaintext, plaintext)
 	}
 
 	// Test pointer usage
 	es := ES(plaintext)
 	encryptedPtr := &es
-	if encryptedPtr.String() != plaintext {
-		t.Errorf("&ES() plaintext = %q, want %q", encryptedPtr.String(), plaintext)
+	if encryptedPtr.Plaintext != plaintext {
+		t.Errorf("&ES() plaintext = %q, want %q", encryptedPtr.Plaintext, plaintext)
 	}
 }
 
@@ -646,8 +646,8 @@ func TestESP(t *testing.T) {
 		t.Fatal("ESP() returned nil")
 	}
 
-	if encrypted.String() != plaintext {
-		t.Errorf("ESP() plaintext = %q, want %q", encrypted.String(), plaintext)
+	if encrypted.Plaintext != plaintext {
+		t.Errorf("ESP() plaintext = %q, want %q", encrypted.Plaintext, plaintext)
 	}
 
 	// Verify it can be used with driver.Valuer
