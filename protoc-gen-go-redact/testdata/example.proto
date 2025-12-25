@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package testdata;
 
+import "google/protobuf/timestamp.proto";
 import "kit/redact/v1/redact.proto";
 
 option go_package = "github.com/crypto-zero/go-kit/protoc-gen-go-redact/testdata";
@@ -17,5 +18,34 @@ message Account {
   string id = 1;
   string secret_key = 2 [(kit.redact.v1.redact) = {redact: true, mask: "***SECRET***"}];
   User user = 3;
+}
+
+// Multi-level nested structure for testing
+message Address {
+  string street = 1;
+  string city = 2;
+  string zip_code = 3 [(kit.redact.v1.redact) = {redact: true, mask: "[ZIP]"}];
+}
+
+message Department {
+  string name = 1;
+  string budget = 2 [(kit.redact.v1.redact) = {redact: true, mask: "[BUDGET]"}];
+  repeated Account accounts = 3;
+  Address address = 4;
+}
+
+message Organization {
+  string name = 1;
+  string tax_id = 2 [(kit.redact.v1.redact) = {redact: true, mask: "[TAX_ID]"}];
+  repeated Department departments = 3;
+  Address headquarters = 4;
+}
+
+// Test with google.protobuf.Timestamp
+message Event {
+  string name = 1;
+  string api_key = 2 [(kit.redact.v1.redact) = {redact: true}];
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp updated_at = 4;
 }
 

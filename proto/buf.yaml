@@ -1,5 +1,5 @@
 version: v2
-name: buf.build/ls-tech/go-kit
+name: buf.build/crypto-zero/go-kit
 deps:
   - buf.build/googleapis/googleapis:main
 lint:

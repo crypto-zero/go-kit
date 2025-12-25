@@ -7,31 +7,224 @@
 package testdata
 
 import (
+	"encoding/json"
+
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
+// redact returns a map representation with sensitive fields masked.
+// This is used internally for recursive redaction without JSON escaping issues.
+func (x *User) redact() map[string]any {
+	if x == nil {
+		return nil
+	}
+	m := make(map[string]any)
+	m["name"] = x.Name
+	m["email"] = "*"
+	m["password"] = "[HIDDEN]"
+	m["age"] = x.Age
+	return m
+}
+
 // Redact returns a redacted JSON string representation of User.
 // Sensitive fields are masked to prevent accidental logging of sensitive data.
+// This method implements the Redacter interface for Kratos logging middleware.
 func (x *User) Redact() string {
 	if x == nil {
 		return "{}"
 	}
-	clone := proto.Clone(x).(*User)
-	clone.Email = "***"
-	clone.Password = "[HIDDEN]"
-	b, _ := protojson.Marshal(clone)
+	b, _ := json.Marshal(x.redact())
 	return string(b)
+}
+
+// redact returns a map representation with sensitive fields masked.
+// This is used internally for recursive redaction without JSON escaping issues.
+func (x *Account) redact() map[string]any {
+	if x == nil {
+		return nil
+	}
+	m := make(map[string]any)
+	m["id"] = x.Id
+	m["secretKey"] = "***SECRET***"
+	if x.User != nil {
+		if r, ok := any(x.User).(interface{ redact() map[string]any }); ok {
+			m["user"] = r.redact()
+		} else if pm, ok := any(x.User).(proto.Message); ok {
+			m["user"] = json.RawMessage(protojson.Format(pm))
+		} else {
+			m["user"] = x.User
+		}
+	}
+	return m
 }
 
 // Redact returns a redacted JSON string representation of Account.
 // Sensitive fields are masked to prevent accidental logging of sensitive data.
+// This method implements the Redacter interface for Kratos logging middleware.
 func (x *Account) Redact() string {
 	if x == nil {
 		return "{}"
 	}
-	clone := proto.Clone(x).(*Account)
-	clone.SecretKey = "***SECRET***"
-	b, _ := protojson.Marshal(clone)
+	b, _ := json.Marshal(x.redact())
+	return string(b)
+}
+
+// redact returns a map representation with sensitive fields masked.
+// This is used internally for recursive redaction without JSON escaping issues.
+func (x *Address) redact() map[string]any {
+	if x == nil {
+		return nil
+	}
+	m := make(map[string]any)
+	m["street"] = x.Street
+	m["city"] = x.City
+	m["zipCode"] = "[ZIP]"
+	return m
+}
+
+// Redact returns a redacted JSON string representation of Address.
+// Sensitive fields are masked to prevent accidental logging of sensitive data.
+// This method implements the Redacter interface for Kratos logging middleware.
+func (x *Address) Redact() string {
+	if x == nil {
+		return "{}"
+	}
+	b, _ := json.Marshal(x.redact())
+	return string(b)
+}
+
+// redact returns a map representation with sensitive fields masked.
+// This is used internally for recursive redaction without JSON escaping issues.
+func (x *Department) redact() map[string]any {
+	if x == nil {
+		return nil
+	}
+	m := make(map[string]any)
+	m["name"] = x.Name
+	m["budget"] = "[BUDGET]"
+	if len(x.Accounts) > 0 {
+		items := make([]any, len(x.Accounts))
+		for i, item := range x.Accounts {
+			if item != nil {
+				if r, ok := any(item).(interface{ redact() map[string]any }); ok {
+					items[i] = r.redact()
+				} else if pm, ok := any(item).(proto.Message); ok {
+					items[i] = json.RawMessage(protojson.Format(pm))
+				} else {
+					items[i] = item
+				}
+			}
+		}
+		m["accounts"] = items
+	}
+	if x.Address != nil {
+		if r, ok := any(x.Address).(interface{ redact() map[string]any }); ok {
+			m["address"] = r.redact()
+		} else if pm, ok := any(x.Address).(proto.Message); ok {
+			m["address"] = json.RawMessage(protojson.Format(pm))
+		} else {
+			m["address"] = x.Address
+		}
+	}
+	return m
+}
+
+// Redact returns a redacted JSON string representation of Department.
+// Sensitive fields are masked to prevent accidental logging of sensitive data.
+// This method implements the Redacter interface for Kratos logging middleware.
+func (x *Department) Redact() string {
+	if x == nil {
+		return "{}"
+	}
+	b, _ := json.Marshal(x.redact())
+	return string(b)
+}
+
+// redact returns a map representation with sensitive fields masked.
+// This is used internally for recursive redaction without JSON escaping issues.
+func (x *Organization) redact() map[string]any {
+	if x == nil {
+		return nil
+	}
+	m := make(map[string]any)
+	m["name"] = x.Name
+	m["taxId"] = "[TAX_ID]"
+	if len(x.Departments) > 0 {
+		items := make([]any, len(x.Departments))
+		for i, item := range x.Departments {
+			if item != nil {
+				if r, ok := any(item).(interface{ redact() map[string]any }); ok {
+					items[i] = r.redact()
+				} else if pm, ok := any(item).(proto.Message); ok {
+					items[i] = json.RawMessage(protojson.Format(pm))
+				} else {
+					items[i] = item
+				}
+			}
+		}
+		m["departments"] = items
+	}
+	if x.Headquarters != nil {
+		if r, ok := any(x.Headquarters).(interface{ redact() map[string]any }); ok {
+			m["headquarters"] = r.redact()
+		} else if pm, ok := any(x.Headquarters).(proto.Message); ok {
+			m["headquarters"] = json.RawMessage(protojson.Format(pm))
+		} else {
+			m["headquarters"] = x.Headquarters
+		}
+	}
+	return m
+}
+
+// Redact returns a redacted JSON string representation of Organization.
+// Sensitive fields are masked to prevent accidental logging of sensitive data.
+// This method implements the Redacter interface for Kratos logging middleware.
+func (x *Organization) Redact() string {
+	if x == nil {
+		return "{}"
+	}
+	b, _ := json.Marshal(x.redact())
+	return string(b)
+}
+
+// redact returns a map representation with sensitive fields masked.
+// This is used internally for recursive redaction without JSON escaping issues.
+func (x *Event) redact() map[string]any {
+	if x == nil {
+		return nil
+	}
+	m := make(map[string]any)
+	m["name"] = x.Name
+	m["apiKey"] = "*"
+	if x.CreatedAt != nil {
+		if r, ok := any(x.CreatedAt).(interface{ redact() map[string]any }); ok {
+			m["createdAt"] = r.redact()
+		} else if pm, ok := any(x.CreatedAt).(proto.Message); ok {
+			m["createdAt"] = json.RawMessage(protojson.Format(pm))
+		} else {
+			m["createdAt"] = x.CreatedAt
+		}
+	}
+	if x.UpdatedAt != nil {
+		if r, ok := any(x.UpdatedAt).(interface{ redact() map[string]any }); ok {
+			m["updatedAt"] = r.redact()
+		} else if pm, ok := any(x.UpdatedAt).(proto.Message); ok {
+			m["updatedAt"] = json.RawMessage(protojson.Format(pm))
+		} else {
+			m["updatedAt"] = x.UpdatedAt
+		}
+	}
+	return m
+}
+
+// Redact returns a redacted JSON string representation of Event.
+// Sensitive fields are masked to prevent accidental logging of sensitive data.
+// This method implements the Redacter interface for Kratos logging middleware.
+func (x *Event) Redact() string {
+	if x == nil {
+		return "{}"
+	}
+	b, _ := json.Marshal(x.redact())
 	return string(b)
 }

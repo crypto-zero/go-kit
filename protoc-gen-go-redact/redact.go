@@ -43,6 +43,8 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) *protogen.Generated
 
 	// Import packages
 	g.P("import (")
+	g.P(`	"encoding/json"`)
+	g.P()
 	g.P(`	"google.golang.org/protobuf/encoding/protojson"`)
 	g.P(`	"google.golang.org/protobuf/proto"`)
 	g.P(")")
@@ -73,11 +75,12 @@ func buildMessageDesc(msg *protogen.Message) *messageDesc {
 
 	for _, field := range msg.Fields {
 		fd := &fieldDesc{
-			GoName:    field.GoName,
-			JSONName:  string(field.Desc.JSONName()),
-			Redact:    false,
-			Mask:      "***",
-			IsMessage: field.Desc.Kind() == protoreflect.MessageKind,
+			GoName:     field.GoName,
+			JSONName:   string(field.Desc.JSONName()),
+			Redact:     false,
+			Mask:       "*",
+			IsMessage:  field.Desc.Kind() == protoreflect.MessageKind,
+			IsRepeated: field.Desc.IsList(),
 		}
 
 		// Check for redact option using the generated extension

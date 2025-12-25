@@ -6,8 +6,10 @@ A protoc plugin that generates `Redact()` methods for Protocol Buffer messages t
 
 - Generates `Redact()` method for messages containing sensitive fields
 - Customizable mask strings per field
-- Returns JSON-formatted string with sensitive data replaced
-- Works alongside `protoc-gen-go` as a complementary plugin
+- **Recursive redaction** - nested messages are automatically redacted
+- **Well-known types support** - `Timestamp`, `Duration` etc. are properly formatted
+- **Kratos compatible** - implements the `Redacter` interface for Kratos logging middleware
+- Returns clean JSON without escape characters
 
 ## Installation
 
@@ -26,13 +28,12 @@ go build -o protoc-gen-go-redact .
 
 ### 1. Import the redact proto definition
 
-First, import the redact options in your `.proto` file:
-
 ```protobuf
 syntax = "proto3";
 
 package yourpackage;
 
+import "google/protobuf/timestamp.proto";
 import "kit/redact/v1/redact.proto";
 
 option go_package = "your/go/package";
@@ -53,13 +54,17 @@ message User {
 message Account {
   string id = 1;
   string secret_key = 2 [(kit.redact.v1.redact) = {redact: true, mask: "***SECRET***"}];
-  User user = 3;
+  User user = 3;  // Nested message - will be recursively redacted
+}
+
+message Event {
+  string name = 1;
+  string api_key = 2 [(kit.redact.v1.redact) = {redact: true}];
+  google.protobuf.Timestamp created_at = 3;  // Well-known type - formatted as RFC 3339
 }
 ```
 
 ### 3. Generate code
-
-Run protoc with both `protoc-gen-go` and `protoc-gen-go-redact`:
 
 ```bash
 protoc \
@@ -69,10 +74,6 @@ protoc \
   --go-redact_out=. --go-redact_opt=paths=source_relative \
   your_proto_file.proto
 ```
-
-This generates two files:
-- `your_proto_file.pb.go` - Standard protobuf Go code
-- `your_proto_file_redact.pb.go` - Redact methods
 
 ### 4. Use in your code
 
@@ -86,16 +87,11 @@ user := &User{
 
 // Safe for logging - sensitive data is masked
 fmt.Println(user.Redact())
-// Output: {"age":30,"email":"***","name":"John Doe","password":"[HIDDEN]"}
+// Output: {"age":30,"email":"*","name":"John Doe","password":"[HIDDEN]"}
 
 // Original data remains unchanged
 fmt.Println(user.Email)    // john@example.com
 fmt.Println(user.Password) // secret123
-```
-
-###
-```bash
-protoc --plugin=./protoc-gen-go-redact -I. -I../proto --go_out=. --go_opt=paths=source_relative --go-redact_out=. --go-redact_opt=paths=source_relative testdata/example.proto
 ```
 
 ## Redact Options
@@ -103,38 +99,58 @@ protoc --plugin=./protoc-gen-go-redact -I. -I../proto --go_out=. --go_opt=paths=
 | Field   | Type   | Default | Description                              |
 |---------|--------|---------|------------------------------------------|
 | `redact`| bool   | false   | Whether to redact this field             |
-| `mask`  | string | `***`   | The mask string to replace the value with|
+| `mask`  | string | `*`     | The mask string to replace the value with|
 
-## Generated Method
+## Features in Detail
 
-For each message with at least one redacted field, a `Redact()` method is generated:
+### Recursive Redaction
+
+When you call `Account.Redact()`, nested messages like `User` are automatically redacted:
 
 ```go
-// Redact returns a redacted JSON string representation of User.
-// Sensitive fields are masked to prevent accidental logging of sensitive data.
-func (x *User) Redact() string {
-    if x == nil {
-        return "{}"
-    }
-    m := make(map[string]any)
-    m["name"] = x.Name
-    m["email"] = "***"
-    m["password"] = "[HIDDEN]"
-    m["age"] = x.Age
-    b, _ := json.Marshal(m)
-    return string(b)
+account := &Account{
+    Id:        "acc-123",
+    SecretKey: "super-secret",
+    User: &User{
+        Name:     "John",
+        Email:    "john@example.com",
+        Password: "secret",
+    },
+}
+
+fmt.Println(account.Redact())
+// Output: {"id":"acc-123","secretKey":"***SECRET***","user":{"age":0,"email":"*","name":"John","password":"[HIDDEN]"}}
+```
+
+### Well-Known Types Support
+
+`google.protobuf.Timestamp` and other well-known types are properly formatted:
+
+```go
+event := &Event{
+    Name:      "UserLogin",
+    ApiKey:    "secret-key",
+    CreatedAt: timestamppb.Now(),
+}
+
+fmt.Println(event.Redact())
+// Output: {"apiKey":"*","createdAt":"2024-12-25T16:00:00Z","name":"UserLogin"}
+```
+
+### Kratos Integration
+
+The generated `Redact()` method implements the Kratos `Redacter` interface:
+
+```go
+// In Kratos logging middleware, your messages are automatically redacted
+type Redacter interface {
+    Redact() string
 }
 ```
 
-## Use Cases
-
-- **Logging**: Safely log request/response data without exposing sensitive information
-- **Debugging**: Print message contents during development without leaking secrets
-- **Audit trails**: Store redacted versions of data for compliance
-
 ## Example
 
-See the [testdata](./testdata/) directory for a complete example:
+See the [testdata](./testdata/) directory for complete examples:
 
 - [example.proto](./testdata/example.proto) - Proto definition with redact options
 - [example_redact.pb.go](./testdata/example_redact.pb.go) - Generated redact methods
@@ -142,4 +158,3 @@ See the [testdata](./testdata/) directory for a complete example:
 ## License
 
 MIT License
-

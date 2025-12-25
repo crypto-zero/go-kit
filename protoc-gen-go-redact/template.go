@@ -16,11 +16,12 @@ type messageDesc struct {
 }
 
 type fieldDesc struct {
-	GoName    string // Go field name (e.g., "Email")
-	JSONName  string // JSON field name (e.g., "email")
-	Redact    bool   // Whether this field should be redacted
-	Mask      string // Mask string (e.g., "***")
-	IsMessage bool   // Whether this field is a proto message type
+	GoName     string // Go field name (e.g., "Email")
+	JSONName   string // JSON field name (e.g., "email")
+	Redact     bool   // Whether this field should be redacted
+	Mask       string // Mask string (e.g., "*")
+	IsMessage  bool   // Whether this field is a proto message type
+	IsRepeated bool   // Whether this field is a repeated field
 }
 
 func (m *messageDesc) execute() string {
@@ -34,4 +35,3 @@ func (m *messageDesc) execute() string {
 	}
 	return strings.Trim(buf.String(), "\r\n")
 }
-
