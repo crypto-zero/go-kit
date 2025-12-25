@@ -12,5 +12,5 @@ message RedactOptions {
 }
 
 extend google.protobuf.FieldOptions {
-  optional RedactOptions redact = 50000;
+  optional RedactOptions redact = 105000;
 }
