@@ -468,7 +468,6 @@ func TestRedact_AllLevels(t *testing.T) {
 	t.Run("organization_level", func(t *testing.T) {
 		r := org.Redact()
 		t.Logf("Organization.Redact() = %s", r)
-		// Organization 本身没有 redact 字段，但应该递归处理嵌套的 Department
 		if strings.Contains(r, "$100") {
 			t.Error("nested department budget should be redacted")
 		}
