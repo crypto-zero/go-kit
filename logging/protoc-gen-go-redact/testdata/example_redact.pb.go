@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 
 	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 )
 
 // redact returns a map representation with sensitive fields masked.

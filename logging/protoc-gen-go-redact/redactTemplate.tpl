@@ -7,7 +7,44 @@ func (x *{{.Name}}) redact() map[string]any {
 	m := make(map[string]any)
 {{- range .Fields}}
 {{- if .Redact}}
-	m["{{.JSONName}}"] = "{{.Mask}}"
+{{- if .IsRepeated}}
+	m["{{.JSONName}}"] = []any{}
+{{- else if .IsMap}}
+	m["{{.JSONName}}"] = map[string]any{}
+{{- else if .IsMessage}}
+	m["{{.JSONName}}"] = nil
+{{- else if .IsNumeric}}
+	m["{{.JSONName}}"] = int64({{.IntMask}})
+{{- else if .IsFloat}}
+	m["{{.JSONName}}"] = float64({{.DoubleMask}})
+{{- else if .IsBool}}
+	m["{{.JSONName}}"] = {{.BoolMask}}
+{{- else if .IsBytes}}
+	m["{{.JSONName}}"] = "{{.BytesMask}}"
+{{- else if .IsEnum}}
+	m["{{.JSONName}}"] = int32({{.EnumMask}})
+{{- else}}
+	m["{{.JSONName}}"] = "{{.StringMask}}"
+{{- end}}
+{{- else if .IsMap}}
+	if len(x.{{.GoName}}) > 0 {
+		mapVal := make(map[string]any)
+		for k, v := range x.{{.GoName}} {
+			key := fmt.Sprintf("%v", k)
+{{- if .MapValueIsMessage}}
+			if v != nil {
+				if r, ok := any(v).(interface{ redact() map[string]any }); ok {
+					mapVal[key] = r.redact()
+				} else {
+					mapVal[key] = json.RawMessage(protojson.Format(v))
+				}
+			}
+{{- else}}
+			mapVal[key] = v
+{{- end}}
+		}
+		m["{{.JSONName}}"] = mapVal
+	}
 {{- else if and .IsMessage .IsRepeated}}
 	if len(x.{{.GoName}}) > 0 {
 		items := make([]any, len(x.{{.GoName}}))

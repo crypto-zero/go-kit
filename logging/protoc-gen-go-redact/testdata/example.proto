@@ -3,30 +3,70 @@ syntax = "proto3";
 package testdata;
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
 import "kit/redact/v1/redact.proto";
 
 option go_package = "github.com/crypto-zero/go-kit/logging/protoc-gen-go-redact/testdata";
 
-message User {
-  string name = 1;
-  string email = 2 [(kit.redact.v1.redact) = {redact: true}];
-  string password = 3 [(kit.redact.v1.redact) = {redact: true, mask: "[HIDDEN]"}];
-  int64 age = 4;
+// ============================================================================
+// Enum Definitions
+// ============================================================================
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_ACTIVE = 1;
+  STATUS_INACTIVE = 2;
+  STATUS_PENDING = 3;
 }
 
+enum Priority {
+  PRIORITY_UNSPECIFIED = 0;
+  PRIORITY_LOW = 1;
+  PRIORITY_MEDIUM = 2;
+  PRIORITY_HIGH = 3;
+  PRIORITY_CRITICAL = 4;
+}
+
+// ============================================================================
+// Basic Message Types
+// ============================================================================
+
+// User - Basic user information with string redaction
+message User {
+  string id = 1;
+  string name = 2;
+  string email = 3 [(kit.redact.v1.redact) = {redact: true}];
+  string password = 4 [(kit.redact.v1.redact) = {redact: true, mask: "[HIDDEN]"}];
+  string phone = 5 [(kit.redact.v1.redact) = {redact: true, mask: "[PHONE]"}];
+  int64 age = 6;
+}
+
+// Address - Address information
+message Address {
+  string street = 1;
+  string city = 2;
+  string state = 3;
+  string zip_code = 4 [(kit.redact.v1.redact) = {redact: true, mask: "[ZIP]"}];
+  string country = 5;
+}
+
+// ============================================================================
+// Nested Message Tests
+// ============================================================================
+
+// Account - Contains nested User message
 message Account {
   string id = 1;
   string secret_key = 2 [(kit.redact.v1.redact) = {redact: true, mask: "***SECRET***"}];
   User user = 3;
+  Address billing_address = 4;
+  Address shipping_address = 5;
 }
 
-// Multi-level nested structure for testing
-message Address {
-  string street = 1;
-  string city = 2;
-  string zip_code = 3 [(kit.redact.v1.redact) = {redact: true, mask: "[ZIP]"}];
-}
-
+// Department - Multi-level nesting
 message Department {
   string name = 1;
   string budget = 2 [(kit.redact.v1.redact) = {redact: true, mask: "[BUDGET]"}];
@@ -34,65 +74,394 @@ message Department {
   Address address = 4;
 }
 
+// Organization - Deep nesting
 message Organization {
   string name = 1;
-  string tax_id = 2 ;
+  string tax_id = 2 [(kit.redact.v1.redact) = {redact: true, mask: "[TAX_ID]"}];
   repeated Department departments = 3;
   Address headquarters = 4;
 }
 
-// Test with google.protobuf.Timestamp
+// ============================================================================
+// Well-Known Types Tests
+// ============================================================================
+
+// Event - google.protobuf.Timestamp test
 message Event {
-  string name = 1;
-  string api_key = 2 [(kit.redact.v1.redact) = {redact: true}];
-  google.protobuf.Timestamp created_at = 3;
-  google.protobuf.Timestamp updated_at = 4;
-}
-
-// Test with numeric types and repeated primitives
-message Payment {
-  string id = 1;
-  int64 amount = 2 [(kit.redact.v1.redact) = {redact: true, mask: "[AMOUNT]"}];
-  double balance = 3 [(kit.redact.v1.redact) = {redact: true, mask: "[BALANCE]"}];
-  int32 pin_code = 4 [(kit.redact.v1.redact) = {redact: true}];
-  string currency = 5;
-  repeated string card_numbers = 6;
-  repeated int64 transaction_ids = 7;
-}
-
-// Test wrapper without own redact fields (should still generate Redact for nested)
-message Wrapper {
   string id = 1;
   string name = 2;
-  User user = 3;
-  repeated Account accounts = 4;
+  string api_key = 3 [(kit.redact.v1.redact) = {redact: true}];
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  google.protobuf.Timestamp secret_time = 6 [(kit.redact.v1.redact) = {redact: true}];
 }
 
-// Test with special characters in values
-message SpecialChars {
+// Task - google.protobuf.Duration test
+message Task {
+  string id = 1;
+  string name = 2;
+  google.protobuf.Duration timeout = 3;
+  google.protobuf.Duration secret_duration = 4 [(kit.redact.v1.redact) = {redact: true}];
+}
+
+// WrapperTypes - Wrapper types test
+message WrapperTypes {
+  google.protobuf.StringValue string_val = 1;
+  google.protobuf.Int32Value int32_val = 2;
+  google.protobuf.Int64Value int64_val = 3;
+  google.protobuf.FloatValue float_val = 4;
+  google.protobuf.DoubleValue double_val = 5;
+  google.protobuf.BoolValue bool_val = 6;
+  google.protobuf.BytesValue bytes_val = 7;
+  google.protobuf.UInt32Value uint32_val = 8;
+  google.protobuf.UInt64Value uint64_val = 9;
+  // Redacted wrappers
+  google.protobuf.StringValue secret_string = 10 [(kit.redact.v1.redact) = {redact: true}];
+  google.protobuf.Int64Value secret_int = 11 [(kit.redact.v1.redact) = {redact: true}];
+}
+
+// AnyAndStruct - Any and Struct types test
+message AnyAndStruct {
+  string id = 1;
+  google.protobuf.Any payload = 2;
+  google.protobuf.Any secret_payload = 3 [(kit.redact.v1.redact) = {redact: true}];
+  google.protobuf.Struct metadata = 4;
+  google.protobuf.Struct secret_metadata = 5 [(kit.redact.v1.redact) = {redact: true}];
+  google.protobuf.Value value = 6;
+  google.protobuf.ListValue list_value = 7;
+}
+
+// ============================================================================
+// All Scalar Types Tests
+// ============================================================================
+
+// AllScalarTypes - Covers all proto3 scalar types
+message AllScalarTypes {
+  // ============ Floating Point Types ============
+  double double_val = 1;
+  float float_val = 2;
+  double redact_double = 3 [(kit.redact.v1.redact) = {redact: true}];
+  float redact_float = 4 [(kit.redact.v1.redact) = {redact: true}];
+
+  // ============ Signed Integers ============
+  int32 int32_val = 10;
+  int64 int64_val = 11;
+  int32 redact_int32 = 12 [(kit.redact.v1.redact) = {redact: true}];
+  int64 redact_int64 = 13 [(kit.redact.v1.redact) = {redact: true}];
+
+  // ============ Unsigned Integers ============
+  uint32 uint32_val = 20;
+  uint64 uint64_val = 21;
+  uint32 redact_uint32 = 22 [(kit.redact.v1.redact) = {redact: true}];
+  uint64 redact_uint64 = 23 [(kit.redact.v1.redact) = {redact: true}];
+
+  // ============ ZigZag Encoded Integers ============
+  sint32 sint32_val = 30;
+  sint64 sint64_val = 31;
+  sint32 redact_sint32 = 32 [(kit.redact.v1.redact) = {redact: true}];
+  sint64 redact_sint64 = 33 [(kit.redact.v1.redact) = {redact: true}];
+
+  // ============ Fixed-Length Integers ============
+  fixed32 fixed32_val = 40;
+  fixed64 fixed64_val = 41;
+  fixed32 redact_fixed32 = 42 [(kit.redact.v1.redact) = {redact: true}];
+  fixed64 redact_fixed64 = 43 [(kit.redact.v1.redact) = {redact: true}];
+
+  // ============ Fixed-Length Signed Integers ============
+  sfixed32 sfixed32_val = 50;
+  sfixed64 sfixed64_val = 51;
+  sfixed32 redact_sfixed32 = 52 [(kit.redact.v1.redact) = {redact: true}];
+  sfixed64 redact_sfixed64 = 53 [(kit.redact.v1.redact) = {redact: true}];
+
+  // ============ Boolean Type ============
+  bool bool_val = 60;
+  bool redact_bool = 61 [(kit.redact.v1.redact) = {redact: true}];
+
+  // ============ String Type ============
+  string string_val = 70;
+  string redact_string = 71 [(kit.redact.v1.redact) = {redact: true}];
+  string redact_string_custom = 72 [(kit.redact.v1.redact) = {redact: true, mask: "[CUSTOM]"}];
+
+  // ============ Bytes Type ============
+  bytes bytes_val = 80;
+  bytes redact_bytes = 81 [(kit.redact.v1.redact) = {redact: true}];
+}
+
+// ============================================================================
+// Enum Type Tests
+// ============================================================================
+
+// EnumTypes - Enum type tests
+message EnumTypes {
+  Status status = 1;
+  Priority priority = 2;
+  Status redact_status = 3 [(kit.redact.v1.redact) = {redact: true}];
+  Priority redact_priority = 4 [(kit.redact.v1.redact) = {redact: true, mask: "[PRIORITY]"}];
+}
+
+// ============================================================================
+// Repeated Type Tests
+// ============================================================================
+
+// RepeatedScalars - Repeated scalar types
+message RepeatedScalars {
+  // Without redact
+  repeated double double_vals = 1;
+  repeated float float_vals = 2;
+  repeated int32 int32_vals = 3;
+  repeated int64 int64_vals = 4;
+  repeated uint32 uint32_vals = 5;
+  repeated uint64 uint64_vals = 6;
+  repeated sint32 sint32_vals = 7;
+  repeated sint64 sint64_vals = 8;
+  repeated fixed32 fixed32_vals = 9;
+  repeated fixed64 fixed64_vals = 10;
+  repeated sfixed32 sfixed32_vals = 11;
+  repeated sfixed64 sfixed64_vals = 12;
+  repeated bool bool_vals = 13;
+  repeated string string_vals = 14;
+  repeated bytes bytes_vals = 15;
+
+  // With redact
+  repeated double redact_double_vals = 21 [(kit.redact.v1.redact) = {redact: true}];
+  repeated float redact_float_vals = 22 [(kit.redact.v1.redact) = {redact: true}];
+  repeated int32 redact_int32_vals = 23 [(kit.redact.v1.redact) = {redact: true}];
+  repeated int64 redact_int64_vals = 24 [(kit.redact.v1.redact) = {redact: true}];
+  repeated bool redact_bool_vals = 25 [(kit.redact.v1.redact) = {redact: true}];
+  repeated string redact_string_vals = 26 [(kit.redact.v1.redact) = {redact: true}];
+  repeated bytes redact_bytes_vals = 27 [(kit.redact.v1.redact) = {redact: true}];
+}
+
+// RepeatedEnums - Repeated enum types
+message RepeatedEnums {
+  repeated Status statuses = 1;
+  repeated Priority priorities = 2;
+  repeated Status redact_statuses = 3 [(kit.redact.v1.redact) = {redact: true}];
+}
+
+// RepeatedMessages - Repeated message types
+message RepeatedMessages {
+  repeated User users = 1;
+  repeated Address addresses = 2;
+  repeated User redact_users = 3 [(kit.redact.v1.redact) = {redact: true}];
+  repeated google.protobuf.Timestamp timestamps = 4;
+  repeated google.protobuf.Timestamp redact_timestamps = 5 [(kit.redact.v1.redact) = {redact: true}];
+}
+
+// ============================================================================
+// Map Type Tests
+// ============================================================================
+
+// MapWithStringKey - Map types with string key
+message MapWithStringKey {
+  // Different value types
+  map<string, string> string_map = 1;
+  map<string, int32> int32_map = 2;
+  map<string, int64> int64_map = 3;
+  map<string, double> double_map = 4;
+  map<string, bool> bool_map = 5;
+  map<string, bytes> bytes_map = 6;
+
+  // Message value types
+  map<string, User> user_map = 10;
+  map<string, Address> address_map = 11;
+
+  // Enum value types
+  map<string, Status> status_map = 15;
+
+  // With redact
+  map<string, string> redact_string_map = 20 [(kit.redact.v1.redact) = {redact: true}];
+  map<string, int64> redact_int64_map = 21 [(kit.redact.v1.redact) = {redact: true}];
+  map<string, User> redact_user_map = 22 [(kit.redact.v1.redact) = {redact: true}];
+}
+
+// MapWithIntKey - Map types with integer key
+message MapWithIntKey {
+  map<int32, string> int32_key_map = 1;
+  map<int64, string> int64_key_map = 2;
+  map<uint32, string> uint32_key_map = 3;
+  map<uint64, string> uint64_key_map = 4;
+  map<sint32, string> sint32_key_map = 5;
+  map<sint64, string> sint64_key_map = 6;
+  map<fixed32, string> fixed32_key_map = 7;
+  map<fixed64, string> fixed64_key_map = 8;
+  map<sfixed32, string> sfixed32_key_map = 9;
+  map<sfixed64, string> sfixed64_key_map = 10;
+
+  // With redact
+  map<int32, string> redact_int32_key_map = 20 [(kit.redact.v1.redact) = {redact: true}];
+  map<int64, User> redact_int64_user_map = 21 [(kit.redact.v1.redact) = {redact: true}];
+}
+
+// MapWithBoolKey - Map types with bool key
+message MapWithBoolKey {
+  map<bool, string> bool_key_map = 1;
+  map<bool, User> bool_user_map = 2;
+  map<bool, string> redact_bool_key_map = 3 [(kit.redact.v1.redact) = {redact: true}];
+}
+
+// ============================================================================
+// Oneof Type Tests
+// ============================================================================
+
+// OneofBasic - Basic oneof test
+message OneofBasic {
+  string id = 1;
+
+  oneof value {
+    string string_value = 2;
+    int64 int_value = 3;
+    double double_value = 4;
+    bool bool_value = 5;
+  }
+}
+
+// OneofWithRedact - Oneof with redact
+message OneofWithRedact {
+  string id = 1;
+
+  oneof credential {
+    string api_key = 2 [(kit.redact.v1.redact) = {redact: true}];
+    string token = 3 [(kit.redact.v1.redact) = {redact: true, mask: "[TOKEN]"}];
+    bytes secret = 4 [(kit.redact.v1.redact) = {redact: true}];
+  }
+
+  oneof public_info {
+    string description = 5;
+    int64 count = 6;
+  }
+}
+
+// OneofWithMessage - Oneof containing message types
+message OneofWithMessage {
+  string id = 1;
+
+  oneof payload {
+    User user = 2;
+    Address address = 3;
+    Account account = 4;
+  }
+
+  oneof secret_payload {
+    User secret_user = 5 [(kit.redact.v1.redact) = {redact: true}];
+    string secret_string = 6 [(kit.redact.v1.redact) = {redact: true}];
+  }
+}
+
+// OneofWithEnum - Oneof containing enum
+message OneofWithEnum {
+  string id = 1;
+
+  oneof status_info {
+    Status status = 2;
+    Priority priority = 3;
+    string status_text = 4;
+  }
+}
+
+// ============================================================================
+// Mixed Complex Type Tests
+// ============================================================================
+
+// ComplexMessage - Mixed all types
+message ComplexMessage {
+  // Basic fields
+  string id = 1;
+  string name = 2;
+  string secret = 3 [(kit.redact.v1.redact) = {redact: true}];
+
+  // Scalar types
+  int64 count = 10;
+  double score = 11;
+  bool active = 12;
+  int64 redact_count = 13 [(kit.redact.v1.redact) = {redact: true}];
+
+  // Enum
+  Status status = 20;
+  Status redact_status = 21 [(kit.redact.v1.redact) = {redact: true}];
+
+  // Nested messages
+  User owner = 30;
+  Address location = 31;
+  User redact_owner = 32 [(kit.redact.v1.redact) = {redact: true}];
+
+  // Well-known types
+  google.protobuf.Timestamp created_at = 40;
+  google.protobuf.Duration timeout = 41;
+  google.protobuf.Timestamp redact_time = 42 [(kit.redact.v1.redact) = {redact: true}];
+
+  // Repeated
+  repeated string tags = 50;
+  repeated User members = 51;
+  repeated string redact_tags = 52 [(kit.redact.v1.redact) = {redact: true}];
+  repeated User redact_members = 53 [(kit.redact.v1.redact) = {redact: true}];
+
+  // Map
+  map<string, string> labels = 60;
+  map<string, User> assignees = 61;
+  map<string, string> redact_labels = 62 [(kit.redact.v1.redact) = {redact: true}];
+  map<string, User> redact_assignees = 63 [(kit.redact.v1.redact) = {redact: true}];
+  map<int32, string> indexed_data = 64;
+
+  // Oneof
+  oneof extra {
+    string note = 70;
+    int64 priority_value = 71;
+    User reviewer = 72;
+  }
+
+  oneof secret_extra {
+    string secret_note = 73 [(kit.redact.v1.redact) = {redact: true}];
+    int64 secret_priority = 74 [(kit.redact.v1.redact) = {redact: true}];
+  }
+}
+
+// ============================================================================
+// Edge Case Tests
+// ============================================================================
+
+// EmptyMessage - Empty message
+message EmptyMessage {}
+
+// MessageWithOnlyRedact - Message with only redact fields
+message MessageWithOnlyRedact {
+  string password = 1 [(kit.redact.v1.redact) = {redact: true}];
+  string token = 2 [(kit.redact.v1.redact) = {redact: true}];
+}
+
+// MessageWithNoRedact - No redact fields but contains nested message with redact
+message MessageWithNoRedact {
+  string id = 1;
+  string name = 2;
+  User user = 3;  // User has redact fields, so this message also needs Redact()
+}
+
+// DeepNested - Deep nesting test
+message Level4 {
+  string secret = 1 [(kit.redact.v1.redact) = {redact: true}];
+}
+
+message Level3 {
+  string name = 1;
+  Level4 level4 = 2;
+}
+
+message Level2 {
+  string name = 1;
+  Level3 level3 = 2;
+}
+
+message Level1 {
+  string name = 1;
+  Level2 level2 = 2;
+}
+
+// SpecialCharacters - Special characters test
+message SpecialCharacters {
   string normal = 1;
-  string with_quotes = 2 [(kit.redact.v1.redact) = {redact: true, mask: "[REDACTED]"}];
-  string unicode_field = 3;
+  string with_quotes = 2 [(kit.redact.v1.redact) = {redact: true, mask: "\"quoted\""}];
+  string with_backslash = 3 [(kit.redact.v1.redact) = {redact: true, mask: "back\\slash"}];
+  string with_newline = 4 [(kit.redact.v1.redact) = {redact: true, mask: "line1\\nline2"}];
+  string unicode = 5 [(kit.redact.v1.redact) = {redact: true, mask: "Hello World"}];
+  string emoji = 6 [(kit.redact.v1.redact) = {redact: true, mask: "[LOCKED]"}];
 }
-
-// Test empty message with only message fields
-message Container {
-  User user = 1;
-  Address address = 2;
-}
-
-// Test with bool and enum types
-enum Status {
-  STATUS_UNSPECIFIED = 0;
-  STATUS_ACTIVE = 1;
-  STATUS_INACTIVE = 2;
-}
-
-message Profile {
-  string username = 1;
-  string ssn = 2 [(kit.redact.v1.redact) = {redact: true, mask: "[SSN]"}];
-  bool is_verified = 3;
-  Status status = 4;
-  repeated string tags = 5;
-}
-
