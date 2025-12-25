@@ -2,6 +2,7 @@ package zap
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -106,6 +107,13 @@ func (h *WrapHandler) resolveAttrs(ctx context.Context, attrs []slog.Attr) (
 		case FunctionField:
 			value := attrValue.F(ctx)
 			attr = slog.Any(attr.Key, value)
+		case json.RawMessage:
+			// Unmarshal json.RawMessage to any so zap can serialize it correctly
+			// This avoids double escaping when logging JSON strings
+			var value any
+			if err := json.Unmarshal(attrValue, &value); err == nil {
+				attr = slog.Any(attr.Key, value)
+			}
 		}
 		out = append(out, attr)
 	}

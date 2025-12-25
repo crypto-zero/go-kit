@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"google.golang.org/grpc/codes"
 
 	"github.com/go-kratos/kratos/v2/errors"
-	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/middleware"
 	"github.com/go-kratos/kratos/v2/transport"
 	"github.com/go-kratos/kratos/v2/transport/http/status"
@@ -21,7 +21,7 @@ type Redacter interface {
 }
 
 // Server is an server logging middleware.
-func Server(logger log.Logger) middleware.Middleware {
+func Server(logger *slog.Logger) middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req any) (reply any, err error) {
 			var (
@@ -45,11 +45,13 @@ func Server(logger log.Logger) middleware.Middleware {
 				reason = se.Reason
 			}
 			level, stack := extractError(err)
-			log.NewHelper(log.WithContext(ctx, logger)).Log(level,
+			logger.Log(ctx, level,
+				"server request",
 				"kind", "server",
 				"component", kind,
 				"operation", operation,
 				"args", extractArgs(req),
+				"reply", extractArgs(reply),
 				"code", code,
 				"reason", reason,
 				"stack", stack,
@@ -61,7 +63,7 @@ func Server(logger log.Logger) middleware.Middleware {
 }
 
 // Client is a client logging middleware.
-func Client(logger log.Logger) middleware.Middleware {
+func Client(logger *slog.Logger) middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req any) (reply any, err error) {
 			var (
@@ -85,11 +87,13 @@ func Client(logger log.Logger) middleware.Middleware {
 				reason = se.Reason
 			}
 			level, stack := extractError(err)
-			log.NewHelper(log.WithContext(ctx, logger)).Log(level,
+			logger.Log(ctx, level,
+				"client request",
 				"kind", "client",
 				"component", kind,
 				"operation", operation,
 				"args", extractArgs(req),
+				"reply", extractArgs(reply),
 				"code", code,
 				"reason", reason,
 				"stack", stack,
@@ -113,10 +117,10 @@ func extractArgs(req any) any {
 	return fmt.Sprintf("%+v", req)
 }
 
-// extractError returns the string of the error
-func extractError(err error) (log.Level, string) {
+// extractError returns the slog level and error stack
+func extractError(err error) (slog.Level, string) {
 	if err != nil {
-		return log.LevelError, fmt.Sprintf("%+v", err)
+		return slog.LevelError, fmt.Sprintf("%+v", err)
 	}
-	return log.LevelInfo, ""
+	return slog.LevelInfo, ""
 }
