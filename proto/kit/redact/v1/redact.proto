@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package kit.redact.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/crypto-zero/go-kit/proto/kit/redact/v1;redact";
+
+message RedactOptions {
+  bool redact = 1;
+  string mask = 2;
+}
+
+extend google.protobuf.FieldOptions {
+  optional RedactOptions redact = 50000;
+}

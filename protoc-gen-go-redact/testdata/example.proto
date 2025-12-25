@@ -2,18 +2,20 @@ syntax = "proto3";
 
 package testdata;
 
+import "kit/redact/v1/redact.proto";
+
 option go_package = "github.com/crypto-zero/go-kit/protoc-gen-go-redact/testdata";
 
 message User {
   string name = 1;
-  string email = 2 [(redact.redact) = {redact: true}];
-  string password = 3 [(redact.redact) = {redact: true, mask: "[HIDDEN]"}];
+  string email = 2 [(kit.redact.v1.redact) = {redact: true}];
+  string password = 3 [(kit.redact.v1.redact) = {redact: true, mask: "[HIDDEN]"}];
   int64 age = 4;
 }
 
 message Account {
   string id = 1;
-  string secret_key = 2 [(redact.redact) = {redact: true, mask: "***SECRET***"}];
+  string secret_key = 2 [(kit.redact.v1.redact) = {redact: true, mask: "***SECRET***"}];
   User user = 3;
 }
 
