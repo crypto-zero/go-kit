@@ -16,10 +16,21 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) *protogen.Generated
 		return nil
 	}
 
-	// Collect all messages that have redact fields (including nested messages)
+	// Phase 1: Collect all messages that directly have redact fields
+	messagesWithDirectRedact := make(map[string]bool)
+	collectMessagesWithDirectRedact(file.Messages, messagesWithDirectRedact)
+
+	// Phase 2: Propagate - mark messages that reference redactable messages
+	messagesNeedRedact := make(map[string]bool)
+	for name := range messagesWithDirectRedact {
+		messagesNeedRedact[name] = true
+	}
+	propagateRedactRequirement(file.Messages, messagesNeedRedact)
+
+	// Phase 3: Build message descriptors for code generation
 	var messagesWithRedact []*messageDesc
 	for _, msg := range file.Messages {
-		collectMessagesWithRedact(msg, &messagesWithRedact)
+		collectMessagesForGeneration(msg, messagesNeedRedact, &messagesWithRedact)
 	}
 
 	if len(messagesWithRedact) == 0 {
@@ -57,25 +68,92 @@ func generateFile(gen *protogen.Plugin, file *protogen.File) *protogen.Generated
 	return g
 }
 
-// collectMessagesWithRedact recursively collects all messages with redact fields.
-func collectMessagesWithRedact(msg *protogen.Message, result *[]*messageDesc) {
-	if md := buildMessageDesc(msg); md != nil {
-		*result = append(*result, md)
+// collectMessagesWithDirectRedact finds all messages that have fields directly marked with redact option.
+func collectMessagesWithDirectRedact(messages []*protogen.Message, result map[string]bool) {
+	for _, msg := range messages {
+		if hasDirectRedactField(msg) {
+			result[string(msg.Desc.FullName())] = true
+		}
+		// Recursively check nested messages
+		collectMessagesWithDirectRedact(msg.Messages, result)
 	}
+}
+
+// hasDirectRedactField checks if a message has any field directly marked with redact option.
+func hasDirectRedactField(msg *protogen.Message) bool {
+	for _, field := range msg.Fields {
+		opts := field.Desc.Options().(*descriptorpb.FieldOptions)
+		if opts != nil && proto.HasExtension(opts, redact.E_Redact) {
+			redactOpts := proto.GetExtension(opts, redact.E_Redact).(*redact.RedactOptions)
+			if redactOpts != nil && redactOpts.GetRedact() {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// propagateRedactRequirement propagates the redact requirement up the message tree.
+// If a message contains a field that references a message needing redact, it also needs redact.
+func propagateRedactRequirement(messages []*protogen.Message, needsRedact map[string]bool) {
+	changed := true
+	// Keep iterating until no changes (fixed point)
+	for changed {
+		changed = false
+		for _, msg := range messages {
+			propagateForMessage(msg, needsRedact, &changed)
+		}
+	}
+}
+
+func propagateForMessage(msg *protogen.Message, needsRedact map[string]bool, changed *bool) {
+	msgName := string(msg.Desc.FullName())
+
+	// If already marked, skip
+	if needsRedact[msgName] {
+		// Still need to process nested messages
+		for _, nested := range msg.Messages {
+			propagateForMessage(nested, needsRedact, changed)
+		}
+		return
+	}
+
+	// Check if any message-type field references a message that needs redact
+	for _, field := range msg.Fields {
+		if field.Desc.Kind() == protoreflect.MessageKind {
+			fieldMsgName := string(field.Desc.Message().FullName())
+			if needsRedact[fieldMsgName] {
+				needsRedact[msgName] = true
+				*changed = true
+				break
+			}
+		}
+	}
+
+	// Recursively process nested messages
+	for _, nested := range msg.Messages {
+		propagateForMessage(nested, needsRedact, changed)
+	}
+}
+
+// collectMessagesForGeneration collects messages that need Redact() method generation.
+func collectMessagesForGeneration(msg *protogen.Message, needsRedact map[string]bool, result *[]*messageDesc) {
+	msgName := string(msg.Desc.FullName())
+	if needsRedact[msgName] {
+		if md := buildMessageDesc(msg); md != nil {
+			*result = append(*result, md)
+		}
+	}
+
 	// Recursively handle nested messages
 	for _, nested := range msg.Messages {
-		collectMessagesWithRedact(nested, result)
+		collectMessagesForGeneration(nested, needsRedact, result)
 	}
 }
 
 // buildMessageDesc builds a messageDesc for code generation.
-// A message will have Redact() generated if:
-// 1. It has fields marked with redact option, OR
-// 2. It contains message-type fields (which might have redact in their nested structure)
 func buildMessageDesc(msg *protogen.Message) *messageDesc {
 	var fields []*fieldDesc
-	hasRedactField := false
-	hasMessageField := false
 
 	for _, field := range msg.Fields {
 		isMessage := field.Desc.Kind() == protoreflect.MessageKind
@@ -88,17 +166,12 @@ func buildMessageDesc(msg *protogen.Message) *messageDesc {
 			IsRepeated: field.Desc.IsList(),
 		}
 
-		if isMessage {
-			hasMessageField = true
-		}
-
 		// Check for redact option using the generated extension
 		opts := field.Desc.Options().(*descriptorpb.FieldOptions)
 		if opts != nil && proto.HasExtension(opts, redact.E_Redact) {
 			redactOpts := proto.GetExtension(opts, redact.E_Redact).(*redact.RedactOptions)
 			if redactOpts != nil && redactOpts.GetRedact() {
 				fd.Redact = true
-				hasRedactField = true
 				if redactOpts.GetMask() != "" {
 					fd.Mask = redactOpts.GetMask()
 				}
@@ -106,11 +179,6 @@ func buildMessageDesc(msg *protogen.Message) *messageDesc {
 		}
 
 		fields = append(fields, fd)
-	}
-
-	// Generate Redact() if has redact fields OR has message fields (for recursive redaction)
-	if !hasRedactField && !hasMessageField {
-		return nil
 	}
 
 	return &messageDesc{
