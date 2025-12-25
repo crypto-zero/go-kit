@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"google.golang.org/grpc/codes"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/middleware"
@@ -106,15 +108,20 @@ func Client(logger *slog.Logger) middleware.Middleware {
 
 // extractArgs returns the args for logging.
 // If req implements Redacter, returns json.RawMessage to avoid double JSON escaping.
-func extractArgs(req any) any {
-	if redacter, ok := req.(Redacter); ok {
+// If req is a proto.Message, uses protojson to serialize it.
+func extractArgs(args any) any {
+	if redacter, ok := args.(Redacter); ok {
 		// Return json.RawMessage so the logger won't escape the JSON string again
 		return json.RawMessage(redacter.Redact())
 	}
-	if stringer, ok := req.(fmt.Stringer); ok {
+	if pm, ok := args.(proto.Message); ok {
+		// Use protojson for proto messages without Redacter
+		return json.RawMessage(protojson.Format(pm))
+	}
+	if stringer, ok := args.(fmt.Stringer); ok {
 		return stringer.String()
 	}
-	return fmt.Sprintf("%+v", req)
+	return fmt.Sprintf("%+v", args)
 }
 
 // extractError returns the slog level and error stack

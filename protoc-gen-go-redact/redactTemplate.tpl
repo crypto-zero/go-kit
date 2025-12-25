@@ -24,6 +24,10 @@ func (x *{{.Name}}) redact() map[string]any {
 		}
 		m["{{.JSONName}}"] = items
 	}
+{{- else if .IsRepeated}}
+	if len(x.{{.GoName}}) > 0 {
+		m["{{.JSONName}}"] = x.{{.GoName}}
+	}
 {{- else if .IsMessage}}
 	if x.{{.GoName}} != nil {
 		if r, ok := any(x.{{.GoName}}).(interface{ redact() map[string]any }); ok {

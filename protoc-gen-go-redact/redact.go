@@ -69,18 +69,27 @@ func collectMessagesWithRedact(msg *protogen.Message, result *[]*messageDesc) {
 }
 
 // buildMessageDesc builds a messageDesc for code generation.
+// A message will have Redact() generated if:
+// 1. It has fields marked with redact option, OR
+// 2. It contains message-type fields (which might have redact in their nested structure)
 func buildMessageDesc(msg *protogen.Message) *messageDesc {
 	var fields []*fieldDesc
 	hasRedactField := false
+	hasMessageField := false
 
 	for _, field := range msg.Fields {
+		isMessage := field.Desc.Kind() == protoreflect.MessageKind
 		fd := &fieldDesc{
 			GoName:     field.GoName,
 			JSONName:   string(field.Desc.JSONName()),
 			Redact:     false,
 			Mask:       "*",
-			IsMessage:  field.Desc.Kind() == protoreflect.MessageKind,
+			IsMessage:  isMessage,
 			IsRepeated: field.Desc.IsList(),
+		}
+
+		if isMessage {
+			hasMessageField = true
 		}
 
 		// Check for redact option using the generated extension
@@ -99,7 +108,8 @@ func buildMessageDesc(msg *protogen.Message) *messageDesc {
 		fields = append(fields, fd)
 	}
 
-	if !hasRedactField {
+	// Generate Redact() if has redact fields OR has message fields (for recursive redaction)
+	if !hasRedactField && !hasMessageField {
 		return nil
 	}
 

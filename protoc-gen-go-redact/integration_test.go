@@ -467,8 +467,416 @@ func TestRedact_AllLevels(t *testing.T) {
 
 	t.Run("organization_level", func(t *testing.T) {
 		r := org.Redact()
-		if strings.Contains(r, "tax-123") {
-			t.Error("organization taxId should be redacted")
+		t.Logf("Organization.Redact() = %s", r)
+		// Organization 本身没有 redact 字段，但应该递归处理嵌套的 Department
+		if strings.Contains(r, "$100") {
+			t.Error("nested department budget should be redacted")
 		}
 	})
+}
+
+// TestRedact_NumericTypes tests redaction of numeric fields (int64, double, int32)
+func TestRedact_NumericTypes(t *testing.T) {
+	payment := &testdata.Payment{
+		Id:             "pay-001",
+		Amount:         99999,
+		Balance:        12345.67,
+		PinCode:        1234,
+		Currency:       "USD",
+		CardNumbers:    []string{"4111-1111-1111-1111", "5500-0000-0000-0004"},
+		TransactionIds: []int64{100001, 100002, 100003},
+	}
+
+	redacted := payment.Redact()
+	t.Logf("Payment.Redact() = %s", redacted)
+
+	// Numeric fields should be masked with string
+	if strings.Contains(redacted, "99999") {
+		t.Error("amount should be redacted")
+	}
+	if !strings.Contains(redacted, `"amount":"[AMOUNT]"`) {
+		t.Error("amount mask should be present")
+	}
+
+	if strings.Contains(redacted, "12345.67") {
+		t.Error("balance should be redacted")
+	}
+	if !strings.Contains(redacted, `"balance":"[BALANCE]"`) {
+		t.Error("balance mask should be present")
+	}
+
+	if strings.Contains(redacted, "1234") && !strings.Contains(redacted, "100001") {
+		t.Error("pinCode should be redacted")
+	}
+
+	// Non-sensitive fields should be present
+	if !strings.Contains(redacted, "pay-001") {
+		t.Error("id should be present")
+	}
+	if !strings.Contains(redacted, "USD") {
+		t.Error("currency should be present")
+	}
+
+	// Repeated primitive fields should be present
+	if !strings.Contains(redacted, "4111-1111-1111-1111") {
+		t.Error("card_numbers should be present")
+	}
+	if !strings.Contains(redacted, "100001") {
+		t.Error("transaction_ids should be present")
+	}
+
+	// Valid JSON
+	var result map[string]any
+	if err := json.Unmarshal([]byte(redacted), &result); err != nil {
+		t.Errorf("Redact() output is not valid JSON: %v", err)
+	}
+}
+
+// TestRedact_WrapperWithoutOwnRedact tests wrapper message without own redact fields
+func TestRedact_WrapperWithoutOwnRedact(t *testing.T) {
+	wrapper := &testdata.Wrapper{
+		Id:   "wrapper-001",
+		Name: "Test Wrapper",
+		User: &testdata.User{
+			Name:     "Alice",
+			Email:    "alice@example.com",
+			Password: "alice-secret",
+			Age:      30,
+		},
+		Accounts: []*testdata.Account{
+			{
+				Id:        "acc-001",
+				SecretKey: "secret-key-1",
+				User: &testdata.User{
+					Name:     "Bob",
+					Email:    "bob@example.com",
+					Password: "bob-secret",
+					Age:      25,
+				},
+			},
+			{
+				Id:        "acc-002",
+				SecretKey: "secret-key-2",
+			},
+		},
+	}
+
+	redacted := wrapper.Redact()
+	t.Logf("Wrapper.Redact() = %s", redacted)
+
+	// Wrapper's own fields should be present (no redact on them)
+	if !strings.Contains(redacted, "wrapper-001") {
+		t.Error("wrapper id should be present")
+	}
+	if !strings.Contains(redacted, "Test Wrapper") {
+		t.Error("wrapper name should be present")
+	}
+
+	// Nested User's sensitive fields should be redacted
+	if strings.Contains(redacted, "alice@example.com") {
+		t.Error("nested user email should be redacted")
+	}
+	if strings.Contains(redacted, "alice-secret") {
+		t.Error("nested user password should be redacted")
+	}
+
+	// Nested Accounts' sensitive fields should be redacted
+	if strings.Contains(redacted, "secret-key-1") {
+		t.Error("nested account secretKey should be redacted")
+	}
+	if strings.Contains(redacted, "secret-key-2") {
+		t.Error("nested account secretKey should be redacted")
+	}
+
+	// Non-sensitive nested fields should be present
+	if !strings.Contains(redacted, "Alice") {
+		t.Error("nested user name should be present")
+	}
+	if !strings.Contains(redacted, "acc-001") {
+		t.Error("nested account id should be present")
+	}
+
+	// Valid JSON
+	var result map[string]any
+	if err := json.Unmarshal([]byte(redacted), &result); err != nil {
+		t.Errorf("Redact() output is not valid JSON: %v", err)
+	}
+}
+
+// TestRedact_NilNestedMessages tests handling of nil nested messages
+func TestRedact_NilNestedMessages(t *testing.T) {
+	// Account with nil User
+	account := &testdata.Account{
+		Id:        "acc-nil-user",
+		SecretKey: "secret",
+		User:      nil,
+	}
+
+	redacted := account.Redact()
+	t.Logf("Account with nil User: %s", redacted)
+
+	if !strings.Contains(redacted, "acc-nil-user") {
+		t.Error("id should be present")
+	}
+	if strings.Contains(redacted, "secret") && !strings.Contains(redacted, "***SECRET***") {
+		t.Error("secretKey should be masked")
+	}
+
+	// Valid JSON
+	var result map[string]any
+	if err := json.Unmarshal([]byte(redacted), &result); err != nil {
+		t.Errorf("Redact() output is not valid JSON: %v", err)
+	}
+
+	// Wrapper with nil nested messages
+	wrapper := &testdata.Wrapper{
+		Id:       "wrapper-nil",
+		Name:     "Empty Wrapper",
+		User:     nil,
+		Accounts: nil,
+	}
+
+	redacted = wrapper.Redact()
+	t.Logf("Wrapper with nil fields: %s", redacted)
+
+	// Valid JSON
+	if err := json.Unmarshal([]byte(redacted), &result); err != nil {
+		t.Errorf("Redact() output is not valid JSON: %v", err)
+	}
+}
+
+// TestRedact_EmptyRepeated tests handling of empty repeated fields
+func TestRedact_EmptyRepeated(t *testing.T) {
+	dept := &testdata.Department{
+		Name:     "Empty Dept",
+		Budget:   "$0",
+		Accounts: []*testdata.Account{}, // empty slice
+		Address:  nil,
+	}
+
+	redacted := dept.Redact()
+	t.Logf("Department with empty accounts: %s", redacted)
+
+	if !strings.Contains(redacted, "Empty Dept") {
+		t.Error("name should be present")
+	}
+	if !strings.Contains(redacted, "[BUDGET]") {
+		t.Error("budget mask should be present")
+	}
+
+	// Valid JSON
+	var result map[string]any
+	if err := json.Unmarshal([]byte(redacted), &result); err != nil {
+		t.Errorf("Redact() output is not valid JSON: %v", err)
+	}
+}
+
+// TestRedact_SpecialCharacters tests handling of special characters
+func TestRedact_SpecialCharacters(t *testing.T) {
+	special := &testdata.SpecialChars{
+		Normal:       `Hello "World"`,
+		WithQuotes:   `secret "value"`,
+		UnicodeField: "中文测试 🎉",
+	}
+
+	redacted := special.Redact()
+	t.Logf("SpecialChars.Redact() = %s", redacted)
+
+	// Normal field with quotes should be properly escaped
+	if !strings.Contains(redacted, "Hello") {
+		t.Error("normal field should be present")
+	}
+
+	// Sensitive field should be masked
+	if strings.Contains(redacted, "secret") {
+		t.Error("withQuotes should be redacted")
+	}
+	if !strings.Contains(redacted, "[REDACTED]") {
+		t.Error("withQuotes mask should be present")
+	}
+
+	// Unicode should be preserved
+	if !strings.Contains(redacted, "中文测试") {
+		t.Error("unicode field should be present")
+	}
+
+	// Valid JSON
+	var result map[string]any
+	if err := json.Unmarshal([]byte(redacted), &result); err != nil {
+		t.Errorf("Redact() output is not valid JSON: %v", err)
+	}
+}
+
+// TestRedact_BoolAndEnum tests handling of bool and enum fields
+func TestRedact_BoolAndEnum(t *testing.T) {
+	profile := &testdata.Profile{
+		Username:   "john_doe",
+		Ssn:        "123-45-6789",
+		IsVerified: true,
+		Status:     testdata.Status_STATUS_ACTIVE,
+		Tags:       []string{"admin", "user"},
+	}
+
+	redacted := profile.Redact()
+	t.Logf("Profile.Redact() = %s", redacted)
+
+	// SSN should be masked
+	if strings.Contains(redacted, "123-45-6789") {
+		t.Error("ssn should be redacted")
+	}
+	if !strings.Contains(redacted, "[SSN]") {
+		t.Error("ssn mask should be present")
+	}
+
+	// Non-sensitive fields should be present
+	if !strings.Contains(redacted, "john_doe") {
+		t.Error("username should be present")
+	}
+	if !strings.Contains(redacted, "true") {
+		t.Error("isVerified should be present")
+	}
+
+	// Tags should be present
+	if !strings.Contains(redacted, "admin") {
+		t.Error("tags should be present")
+	}
+
+	// Valid JSON
+	var result map[string]any
+	if err := json.Unmarshal([]byte(redacted), &result); err != nil {
+		t.Errorf("Redact() output is not valid JSON: %v", err)
+	}
+}
+
+// TestRedact_ZeroValues tests handling of zero/default values
+func TestRedact_ZeroValues(t *testing.T) {
+	user := &testdata.User{
+		Name:     "",
+		Email:    "",
+		Password: "",
+		Age:      0,
+	}
+
+	redacted := user.Redact()
+	t.Logf("User with zero values: %s", redacted)
+
+	// Sensitive fields should still be masked even with empty values
+	if !strings.Contains(redacted, `"email":"*"`) {
+		t.Error("email mask should be present even for empty value")
+	}
+	if !strings.Contains(redacted, `"password":"[HIDDEN]"`) {
+		t.Error("password mask should be present even for empty value")
+	}
+
+	// Valid JSON
+	var result map[string]any
+	if err := json.Unmarshal([]byte(redacted), &result); err != nil {
+		t.Errorf("Redact() output is not valid JSON: %v", err)
+	}
+}
+
+// TestRedact_Container tests message with only message fields (no own redact)
+func TestRedact_Container(t *testing.T) {
+	container := &testdata.Container{
+		User: &testdata.User{
+			Name:     "Container User",
+			Email:    "container@example.com",
+			Password: "container-pass",
+			Age:      40,
+		},
+		Address: &testdata.Address{
+			Street:  "Container St",
+			City:    "Container City",
+			ZipCode: "99999",
+		},
+	}
+
+	redacted := container.Redact()
+	t.Logf("Container.Redact() = %s", redacted)
+
+	// Nested sensitive fields should be redacted
+	if strings.Contains(redacted, "container@example.com") {
+		t.Error("user email should be redacted")
+	}
+	if strings.Contains(redacted, "container-pass") {
+		t.Error("user password should be redacted")
+	}
+	if strings.Contains(redacted, "99999") {
+		t.Error("address zipCode should be redacted")
+	}
+
+	// Non-sensitive nested fields should be present
+	if !strings.Contains(redacted, "Container User") {
+		t.Error("user name should be present")
+	}
+	if !strings.Contains(redacted, "Container St") {
+		t.Error("address street should be present")
+	}
+
+	// Valid JSON
+	var result map[string]any
+	if err := json.Unmarshal([]byte(redacted), &result); err != nil {
+		t.Errorf("Redact() output is not valid JSON: %v", err)
+	}
+}
+
+// TestRedact_MultipleRepeatedNested tests multiple levels of repeated nested messages
+func TestRedact_MultipleRepeatedNested(t *testing.T) {
+	org := &testdata.Organization{
+		Name:  "Multi Nested Org",
+		TaxId: "tax-multi",
+		Departments: []*testdata.Department{
+			{
+				Name:   "Dept 1",
+				Budget: "$1000",
+				Accounts: []*testdata.Account{
+					{Id: "d1-a1", SecretKey: "d1-a1-secret"},
+					{Id: "d1-a2", SecretKey: "d1-a2-secret"},
+				},
+			},
+			{
+				Name:   "Dept 2",
+				Budget: "$2000",
+				Accounts: []*testdata.Account{
+					{Id: "d2-a1", SecretKey: "d2-a1-secret"},
+				},
+			},
+		},
+	}
+
+	redacted := org.Redact()
+	t.Logf("Organization with multiple nested: %s", redacted)
+
+	// All nested secrets should be redacted
+	if strings.Contains(redacted, "d1-a1-secret") {
+		t.Error("d1-a1 secret should be redacted")
+	}
+	if strings.Contains(redacted, "d1-a2-secret") {
+		t.Error("d1-a2 secret should be redacted")
+	}
+	if strings.Contains(redacted, "d2-a1-secret") {
+		t.Error("d2-a1 secret should be redacted")
+	}
+
+	// All budgets should be redacted
+	if strings.Contains(redacted, "$1000") {
+		t.Error("dept 1 budget should be redacted")
+	}
+	if strings.Contains(redacted, "$2000") {
+		t.Error("dept 2 budget should be redacted")
+	}
+
+	// IDs should be present
+	if !strings.Contains(redacted, "d1-a1") {
+		t.Error("d1-a1 id should be present")
+	}
+	if !strings.Contains(redacted, "d2-a1") {
+		t.Error("d2-a1 id should be present")
+	}
+
+	// Valid JSON
+	var result map[string]any
+	if err := json.Unmarshal([]byte(redacted), &result); err != nil {
+		t.Errorf("Redact() output is not valid JSON: %v", err)
+	}
 }
