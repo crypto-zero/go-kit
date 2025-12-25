@@ -5,6 +5,7 @@ go 1.25.5
 require (
 	entgo.io/ent v0.14.5
 	github.com/bwmarrin/snowflake v0.3.0
+	github.com/go-kratos/kratos/v2 v2.9.2
 	github.com/google/gops v0.3.28
 	github.com/google/wire v0.7.0
 	github.com/iancoleman/strcase v0.3.0
@@ -42,6 +43,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/go-playground/form/v4 v4.2.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.1.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
