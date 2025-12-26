@@ -907,9 +907,15 @@ func (x *OneofWithRedact) redact() map[string]any {
 	}
 	m := make(map[string]any)
 	m["id"] = x.Id
-	m["apiKey"] = "*"
-	m["token"] = "[TOKEN]"
-	m["secret"] = ""
+	if x.GetApiKey() != "" {
+		m["apiKey"] = "*"
+	}
+	if x.GetToken() != "" {
+		m["token"] = "[TOKEN]"
+	}
+	if x.GetSecret() != nil {
+		m["secret"] = ""
+	}
 	m["description"] = x.GetDescription()
 	m["count"] = x.GetCount()
 	return m
@@ -955,8 +961,12 @@ func (x *OneofWithMessage) redact() map[string]any {
 			m["account"] = json.RawMessage(protojson.Format(x.GetAccount()))
 		}
 	}
-	m["secretUser"] = nil
-	m["secretString"] = "*"
+	if x.GetSecretUser() != nil {
+		m["secretUser"] = nil
+	}
+	if x.GetSecretString() != "" {
+		m["secretString"] = "*"
+	}
 	return m
 }
 
@@ -1076,8 +1086,12 @@ func (x *ComplexMessage) redact() map[string]any {
 			m["reviewer"] = json.RawMessage(protojson.Format(x.GetReviewer()))
 		}
 	}
-	m["secretNote"] = "*"
-	m["secretPriority"] = int64(0)
+	if x.GetSecretNote() != "" {
+		m["secretNote"] = "*"
+	}
+	if x.GetSecretPriority() != 0 {
+		m["secretPriority"] = int64(0)
+	}
 	return m
 }
 
