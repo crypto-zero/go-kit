@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-redact v1.0.0
 // - protoc             v6.33.1
-// source: testdata/example.proto
+// source: example.proto
 
 package testdata
 
