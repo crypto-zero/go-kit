@@ -197,38 +197,63 @@ func getRedactOptions(field *protogen.Field) *redact.RedactOptions {
 //	}
 //
 // Account will be marked as needing redaction because it contains User.
+// propagateRedactRequirement propagates the redact requirement up the message hierarchy.
+//
+// This implements a standard BFS algorithm on the reverse dependency graph.
+// Instead of repeatedly scanning all messages (O(N^2)), we:
+// 1. Build a reverse graph where edges point from Child -> Parents
+// 2. Start BFS from messages that already need redaction
+// 3. Mark parents as needing redaction and add them to the queue
+//
+// Complexity: O(N + E) where N is number of messages and E is number of field references.
 func propagateRedactRequirement(messages []*protogen.Message, needsRedact map[string]bool) {
-	// Fixed-point iteration: keep propagating until no changes occur
-	for changed := true; changed; {
-		changed = false
-		propagateForMessages(messages, needsRedact, &changed)
-	}
-}
+	// 1. Build reverse dependency graph: Child -> [Parent1, Parent2, ...]
+	// Map key: full name of the child message
+	// Map value: list of full names of parent messages that contain this child
+	parents := make(map[string][]string)
 
-// propagateForMessages is the recursive helper for propagateRedactRequirement.
-// It checks each message's fields and marks the message if any field references
-// a message that needs redaction.
-func propagateForMessages(messages []*protogen.Message, needsRedact map[string]bool, changed *bool) {
-	for _, msg := range messages {
-		msgName := string(msg.Desc.FullName())
+	// Visit all messages to build the graph
+	// We need a helper to traverse nested messages
+	var buildGraph func([]*protogen.Message)
+	buildGraph = func(msgs []*protogen.Message) {
+		for _, parent := range msgs {
+			parentName := string(parent.Desc.FullName())
 
-		// Skip if already marked; check all message-type fields
-		if !needsRedact[msgName] {
-			for _, field := range msg.Fields {
-				// Only message-type fields can propagate redact requirements
+			// Check all fields of this parent
+			for _, field := range parent.Fields {
 				if field.Desc.Kind() == protoreflect.MessageKind {
-					referencedMsg := string(field.Desc.Message().FullName())
-					if needsRedact[referencedMsg] {
-						needsRedact[msgName] = true
-						*changed = true // Signal that we made progress
-						break
-					}
+					childName := string(field.Desc.Message().FullName())
+					parents[childName] = append(parents[childName], parentName)
 				}
 			}
-		}
 
-		// Recursively process nested message definitions
-		propagateForMessages(msg.Messages, needsRedact, changed)
+			// Recurse into nested messages
+			buildGraph(parent.Messages)
+		}
+	}
+	buildGraph(messages)
+
+	// 2. Initialize worklist (queue) with messages that already need redaction
+	var queue []string
+	for msgName := range needsRedact {
+		queue = append(queue, msgName)
+	}
+
+	// 3. Process queue (BFS)
+	// We don't need a separate 'visited' set because 'needsRedact' acts as one.
+	// If a message is in needsRedact, it has been visited/processed.
+	for len(queue) > 0 {
+		childName := queue[0]
+		queue = queue[1:]
+
+		// Find all parents that depend on this child
+		for _, parentName := range parents[childName] {
+			// If parent is not yet marked, mark it and add to queue
+			if !needsRedact[parentName] {
+				needsRedact[parentName] = true
+				queue = append(queue, parentName)
+			}
+		}
 	}
 }
 
