@@ -24,6 +24,7 @@ func main() {
 			if !f.Generate {
 				continue
 			}
+			// generateFile returns nil if no messages need redaction - this is normal
 			generateFile(gen, f)
 		}
 		return nil

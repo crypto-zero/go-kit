@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	_ "embed"
+	"strconv"
 	"strings"
 	"sync"
 	"text/template"
@@ -20,7 +21,9 @@ var (
 func getTemplate() *template.Template {
 	tmplOnce.Do(func() {
 		var err error
-		tmpl, err = template.New("redact").Parse(strings.TrimSpace(redactTemplate))
+		tmpl, err = template.New("redact").Funcs(template.FuncMap{
+			"quote": strconv.Quote,
+		}).Parse(strings.TrimSpace(redactTemplate))
 		if err != nil {
 			panic(err)
 		}
@@ -45,9 +48,10 @@ type fieldDesc struct {
 	IsBytes           bool   // Whether this field is a bytes type
 	IsEnum            bool   // Whether this field is an enum type
 	IsMap             bool   // Whether this field is a map type
+	IsOneof           bool   // Whether this field is part of a oneof
 	MapValueIsMessage bool   // Whether the map value is a message type
 
-	// Custom mask values for scalar types
+	// Custom mask values for scalar types (other types use Go zero values)
 	StringMask string  // Custom mask for string fields, default "*"
 	IntMask    int64   // Custom mask for integer fields, default 0
 	DoubleMask float64 // Custom mask for float/double fields, default 0

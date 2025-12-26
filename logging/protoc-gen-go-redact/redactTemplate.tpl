@@ -20,11 +20,11 @@ func (x *{{.Name}}) redact() map[string]any {
 {{- else if .IsBool}}
 	m["{{.JSONName}}"] = {{.BoolMask}}
 {{- else if .IsBytes}}
-	m["{{.JSONName}}"] = "{{.BytesMask}}"
+	m["{{.JSONName}}"] = {{.BytesMask | quote}}
 {{- else if .IsEnum}}
 	m["{{.JSONName}}"] = int32({{.EnumMask}})
 {{- else}}
-	m["{{.JSONName}}"] = "{{.StringMask}}"
+	m["{{.JSONName}}"] = {{.StringMask | quote}}
 {{- end}}
 {{- else if .IsMap}}
 	if len(x.{{.GoName}}) > 0 {
@@ -64,6 +64,15 @@ func (x *{{.Name}}) redact() map[string]any {
 		m["{{.JSONName}}"] = x.{{.GoName}}
 	}
 {{- else if .IsMessage}}
+{{- if .IsOneof}}
+	if x.Get{{.GoName}}() != nil {
+		if r, ok := any(x.Get{{.GoName}}()).(interface{ redact() map[string]any }); ok {
+			m["{{.JSONName}}"] = r.redact()
+		} else {
+			m["{{.JSONName}}"] = json.RawMessage(protojson.Format(x.Get{{.GoName}}()))
+		}
+	}
+{{- else}}
 	if x.{{.GoName}} != nil {
 		if r, ok := any(x.{{.GoName}}).(interface{ redact() map[string]any }); ok {
 			m["{{.JSONName}}"] = r.redact()
@@ -71,6 +80,9 @@ func (x *{{.Name}}) redact() map[string]any {
 			m["{{.JSONName}}"] = json.RawMessage(protojson.Format(x.{{.GoName}}))
 		}
 	}
+{{- end}}
+{{- else if .IsOneof}}
+	m["{{.JSONName}}"] = x.Get{{.GoName}}()
 {{- else}}
 	m["{{.JSONName}}"] = x.{{.GoName}}
 {{- end}}
