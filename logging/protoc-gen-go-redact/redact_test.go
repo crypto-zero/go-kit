@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -230,10 +231,10 @@ func TestMessageDescExecute(t *testing.T) {
 			}
 
 			// Basic sanity checks
-			if !contains(result, "func (x *"+tt.msg.Name+") redact()") {
+			if !strings.Contains(result, "func (x *"+tt.msg.Name+") redact()") {
 				t.Errorf("Missing redact() method signature")
 			}
-			if !contains(result, "func (x *"+tt.msg.Name+") Redact()") {
+			if !strings.Contains(result, "func (x *"+tt.msg.Name+") Redact()") {
 				t.Errorf("Missing Redact() method signature")
 			}
 		})
@@ -285,22 +286,3 @@ func TestFieldDescDefaults(t *testing.T) {
 		t.Errorf("EnumMask should default to 0, got %d", fd.EnumMask)
 	}
 }
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		(len(s) > 0 && len(substr) > 0 && searchString(s, substr)))
-}
-
-func searchString(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}
-

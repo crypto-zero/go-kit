@@ -255,4 +255,3 @@ func BenchmarkTemplateExecute_Complex(b *testing.B) {
 		_ = msg.execute()
 	}
 }
-
