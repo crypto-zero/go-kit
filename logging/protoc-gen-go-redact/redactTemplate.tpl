@@ -12,7 +12,39 @@ func (x *{{.Name}}) redact() map[string]any {
 {{- else if .IsMap}}
 	m["{{.JSONName}}"] = map[string]any{}
 {{- else if .IsMessage}}
+{{- if .IsOneof}}
+	if x.Get{{.GoName}}() != nil {
+		m["{{.JSONName}}"] = nil
+	}
+{{- else}}
 	m["{{.JSONName}}"] = nil
+{{- end}}
+{{- else if .IsOneof}}
+{{- if .IsBytes}}
+	if x.Get{{.GoName}}() != nil {
+		m["{{.JSONName}}"] = {{.BytesMask | quote}}
+	}
+{{- else if .IsNumeric}}
+	if x.Get{{.GoName}}() != 0 {
+		m["{{.JSONName}}"] = int64({{.IntMask}})
+	}
+{{- else if .IsFloat}}
+	if x.Get{{.GoName}}() != 0 {
+		m["{{.JSONName}}"] = float64({{.DoubleMask}})
+	}
+{{- else if .IsBool}}
+	if x.Get{{.GoName}}() {
+		m["{{.JSONName}}"] = {{.BoolMask}}
+	}
+{{- else if .IsEnum}}
+	if x.Get{{.GoName}}() != 0 {
+		m["{{.JSONName}}"] = int32({{.EnumMask}})
+	}
+{{- else}}
+	if x.Get{{.GoName}}() != "" {
+		m["{{.JSONName}}"] = {{.StringMask | quote}}
+	}
+{{- end}}
 {{- else if .IsNumeric}}
 	m["{{.JSONName}}"] = int64({{.IntMask}})
 {{- else if .IsFloat}}
