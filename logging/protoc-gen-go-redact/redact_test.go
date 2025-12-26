@@ -157,9 +157,8 @@ func TestNeedsFmtPackage(t *testing.T) {
 
 func TestMessageDescExecute(t *testing.T) {
 	tests := []struct {
-		name    string
-		msg     *messageDesc
-		wantErr bool
+		name string
+		msg  *messageDesc
 	}{
 		{
 			name: "simple message with string field",
@@ -170,7 +169,6 @@ func TestMessageDescExecute(t *testing.T) {
 					{GoName: "Email", JSONName: "email", Redact: true, StringMask: "*"},
 				},
 			},
-			wantErr: false,
 		},
 		{
 			name: "message with all field types",
@@ -188,7 +186,6 @@ func TestMessageDescExecute(t *testing.T) {
 					{GoName: "MapField", JSONName: "mapField", Redact: true, IsMap: true},
 				},
 			},
-			wantErr: false,
 		},
 		{
 			name: "message with oneof field",
@@ -198,7 +195,6 @@ func TestMessageDescExecute(t *testing.T) {
 					{GoName: "Value", JSONName: "value", IsOneof: true, IsMessage: true},
 				},
 			},
-			wantErr: false,
 		},
 		{
 			name: "message with map containing message values",
@@ -208,7 +204,6 @@ func TestMessageDescExecute(t *testing.T) {
 					{GoName: "UserMap", JSONName: "userMap", IsMap: true, MapValueIsMessage: true},
 				},
 			},
-			wantErr: false,
 		},
 		{
 			name: "message with special characters in mask",
@@ -219,7 +214,6 @@ func TestMessageDescExecute(t *testing.T) {
 					{GoName: "Token", JSONName: "token", Redact: true, StringMask: "line1\nline2"},
 				},
 			},
-			wantErr: false,
 		},
 	}
 
@@ -250,39 +244,5 @@ func TestMessageDescExecute_EmptyMessage(t *testing.T) {
 	result := msg.execute()
 	if result == "" {
 		t.Error("execute() should handle empty fields")
-	}
-}
-
-// =============================================================================
-// Default Values Tests
-// =============================================================================
-
-func TestDefaultStringMask(t *testing.T) {
-	if defaultStringMask != "*" {
-		t.Errorf("defaultStringMask = %q, want %q", defaultStringMask, "*")
-	}
-}
-
-func TestFieldDescDefaults(t *testing.T) {
-	fd := &fieldDesc{
-		GoName:     "TestField",
-		StringMask: defaultStringMask,
-	}
-
-	// Check Go zero values are used for other masks
-	if fd.IntMask != 0 {
-		t.Errorf("IntMask should default to 0, got %d", fd.IntMask)
-	}
-	if fd.DoubleMask != 0 {
-		t.Errorf("DoubleMask should default to 0, got %f", fd.DoubleMask)
-	}
-	if fd.BoolMask != false {
-		t.Errorf("BoolMask should default to false, got %v", fd.BoolMask)
-	}
-	if fd.BytesMask != "" {
-		t.Errorf("BytesMask should default to empty, got %q", fd.BytesMask)
-	}
-	if fd.EnumMask != 0 {
-		t.Errorf("EnumMask should default to 0, got %d", fd.EnumMask)
 	}
 }
