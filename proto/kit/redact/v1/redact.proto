@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package kit.redact.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/crypto-zero/go-kit/proto/kit/redact/v1;redact";
+
+// RedactOptions configures how a field should be redacted.
+//
+// Scalar types support custom mask values:
+//   - string: custom via string_mask, default "*"
+//   - bytes: custom via bytes_mask, default ""
+//   - enum: custom via enum_mask, default 0
+//   - int32/int64/uint32/uint64/sint32/sint64: custom via int_mask, default 0
+//   - fixed32/fixed64/sfixed32/sfixed64: custom via int_mask, default 0
+//   - float/double: custom via double_mask, default 0
+//   - bool: custom via bool_mask, default false
+//
+// Composite types always use default values (no custom mask):
+//   - message: null
+//   - repeated (any type): []
+//   - map (any type): {}
+message RedactOptions {
+  // If true, this field will be redacted in logs.
+  bool redact = 1;
+
+  // Custom mask values for scalar field types only.
+  // Use the appropriate field based on your field's type.
+  // Composite types (message, repeated, map) always use default values.
+  oneof mask_value {
+    string string_mask = 2;   // For string fields. Default: "*"
+    int64 int_mask = 3;       // For all integer types. Default: 0
+    double double_mask = 4;   // For float/double fields. Default: 0
+    bool bool_mask = 5;       // For bool fields. Default: false
+    string bytes_mask = 6;    // For bytes fields. Default: ""
+    int32 enum_mask = 7;      // For enum fields. Default: 0
+  }
+}
+
+extend google.protobuf.FieldOptions {
+  optional RedactOptions redact = 105000;
+}

@@ -8,3 +8,9 @@ plugins:
       - run
       - ../errors/protoc-gen-kit-errors/main.go
     out: .
+  - local:
+      - go
+      - run
+      - ../protoc-gen-go-redact/main.go
+    out: .
+    opt: paths=source_relative
