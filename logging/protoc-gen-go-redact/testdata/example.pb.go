@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.9
 // 	protoc        v5.29.3
-// source: testdata/example.proto
+// source: example.proto
 
 package testdata
 
@@ -63,11 +63,11 @@ func (x Status) String() string {
 }
 
 func (Status) Descriptor() protoreflect.EnumDescriptor {
-	return file_testdata_example_proto_enumTypes[0].Descriptor()
+	return file_example_proto_enumTypes[0].Descriptor()
 }
 
 func (Status) Type() protoreflect.EnumType {
-	return &file_testdata_example_proto_enumTypes[0]
+	return &file_example_proto_enumTypes[0]
 }
 
 func (x Status) Number() protoreflect.EnumNumber {
@@ -76,7 +76,7 @@ func (x Status) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Status.Descriptor instead.
 func (Status) EnumDescriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{0}
+	return file_example_proto_rawDescGZIP(), []int{0}
 }
 
 type Priority int32
@@ -118,11 +118,11 @@ func (x Priority) String() string {
 }
 
 func (Priority) Descriptor() protoreflect.EnumDescriptor {
-	return file_testdata_example_proto_enumTypes[1].Descriptor()
+	return file_example_proto_enumTypes[1].Descriptor()
 }
 
 func (Priority) Type() protoreflect.EnumType {
-	return &file_testdata_example_proto_enumTypes[1]
+	return &file_example_proto_enumTypes[1]
 }
 
 func (x Priority) Number() protoreflect.EnumNumber {
@@ -131,7 +131,7 @@ func (x Priority) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Priority.Descriptor instead.
 func (Priority) EnumDescriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{1}
+	return file_example_proto_rawDescGZIP(), []int{1}
 }
 
 // User - Basic user information with string redaction
@@ -149,7 +149,7 @@ type User struct {
 
 func (x *User) Reset() {
 	*x = User{}
-	mi := &file_testdata_example_proto_msgTypes[0]
+	mi := &file_example_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -161,7 +161,7 @@ func (x *User) String() string {
 func (*User) ProtoMessage() {}
 
 func (x *User) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[0]
+	mi := &file_example_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -174,7 +174,7 @@ func (x *User) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use User.ProtoReflect.Descriptor instead.
 func (*User) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{0}
+	return file_example_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *User) GetId() string {
@@ -233,7 +233,7 @@ type Address struct {
 
 func (x *Address) Reset() {
 	*x = Address{}
-	mi := &file_testdata_example_proto_msgTypes[1]
+	mi := &file_example_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -245,7 +245,7 @@ func (x *Address) String() string {
 func (*Address) ProtoMessage() {}
 
 func (x *Address) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[1]
+	mi := &file_example_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -258,7 +258,7 @@ func (x *Address) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Address.ProtoReflect.Descriptor instead.
 func (*Address) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{1}
+	return file_example_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Address) GetStreet() string {
@@ -310,7 +310,7 @@ type Account struct {
 
 func (x *Account) Reset() {
 	*x = Account{}
-	mi := &file_testdata_example_proto_msgTypes[2]
+	mi := &file_example_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -322,7 +322,7 @@ func (x *Account) String() string {
 func (*Account) ProtoMessage() {}
 
 func (x *Account) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[2]
+	mi := &file_example_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -335,7 +335,7 @@ func (x *Account) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Account.ProtoReflect.Descriptor instead.
 func (*Account) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{2}
+	return file_example_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Account) GetId() string {
@@ -386,7 +386,7 @@ type Department struct {
 
 func (x *Department) Reset() {
 	*x = Department{}
-	mi := &file_testdata_example_proto_msgTypes[3]
+	mi := &file_example_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -398,7 +398,7 @@ func (x *Department) String() string {
 func (*Department) ProtoMessage() {}
 
 func (x *Department) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[3]
+	mi := &file_example_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -411,7 +411,7 @@ func (x *Department) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Department.ProtoReflect.Descriptor instead.
 func (*Department) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{3}
+	return file_example_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Department) GetName() string {
@@ -455,7 +455,7 @@ type Organization struct {
 
 func (x *Organization) Reset() {
 	*x = Organization{}
-	mi := &file_testdata_example_proto_msgTypes[4]
+	mi := &file_example_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -467,7 +467,7 @@ func (x *Organization) String() string {
 func (*Organization) ProtoMessage() {}
 
 func (x *Organization) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[4]
+	mi := &file_example_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -480,7 +480,7 @@ func (x *Organization) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Organization.ProtoReflect.Descriptor instead.
 func (*Organization) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{4}
+	return file_example_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Organization) GetName() string {
@@ -526,7 +526,7 @@ type Event struct {
 
 func (x *Event) Reset() {
 	*x = Event{}
-	mi := &file_testdata_example_proto_msgTypes[5]
+	mi := &file_example_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -538,7 +538,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[5]
+	mi := &file_example_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -551,7 +551,7 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{5}
+	return file_example_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Event) GetId() string {
@@ -609,7 +609,7 @@ type Task struct {
 
 func (x *Task) Reset() {
 	*x = Task{}
-	mi := &file_testdata_example_proto_msgTypes[6]
+	mi := &file_example_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -621,7 +621,7 @@ func (x *Task) String() string {
 func (*Task) ProtoMessage() {}
 
 func (x *Task) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[6]
+	mi := &file_example_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -634,7 +634,7 @@ func (x *Task) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Task.ProtoReflect.Descriptor instead.
 func (*Task) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{6}
+	return file_example_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Task) GetId() string {
@@ -686,7 +686,7 @@ type WrapperTypes struct {
 
 func (x *WrapperTypes) Reset() {
 	*x = WrapperTypes{}
-	mi := &file_testdata_example_proto_msgTypes[7]
+	mi := &file_example_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -698,7 +698,7 @@ func (x *WrapperTypes) String() string {
 func (*WrapperTypes) ProtoMessage() {}
 
 func (x *WrapperTypes) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[7]
+	mi := &file_example_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -711,7 +711,7 @@ func (x *WrapperTypes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WrapperTypes.ProtoReflect.Descriptor instead.
 func (*WrapperTypes) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{7}
+	return file_example_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *WrapperTypes) GetStringVal() *wrapperspb.StringValue {
@@ -807,7 +807,7 @@ type AnyAndStruct struct {
 
 func (x *AnyAndStruct) Reset() {
 	*x = AnyAndStruct{}
-	mi := &file_testdata_example_proto_msgTypes[8]
+	mi := &file_example_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -819,7 +819,7 @@ func (x *AnyAndStruct) String() string {
 func (*AnyAndStruct) ProtoMessage() {}
 
 func (x *AnyAndStruct) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[8]
+	mi := &file_example_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -832,7 +832,7 @@ func (x *AnyAndStruct) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnyAndStruct.ProtoReflect.Descriptor instead.
 func (*AnyAndStruct) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{8}
+	return file_example_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *AnyAndStruct) GetId() string {
@@ -933,7 +933,7 @@ type AllScalarTypes struct {
 
 func (x *AllScalarTypes) Reset() {
 	*x = AllScalarTypes{}
-	mi := &file_testdata_example_proto_msgTypes[9]
+	mi := &file_example_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -945,7 +945,7 @@ func (x *AllScalarTypes) String() string {
 func (*AllScalarTypes) ProtoMessage() {}
 
 func (x *AllScalarTypes) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[9]
+	mi := &file_example_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -958,7 +958,7 @@ func (x *AllScalarTypes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AllScalarTypes.ProtoReflect.Descriptor instead.
 func (*AllScalarTypes) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{9}
+	return file_example_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *AllScalarTypes) GetDoubleVal() float64 {
@@ -1191,7 +1191,7 @@ type EnumTypes struct {
 
 func (x *EnumTypes) Reset() {
 	*x = EnumTypes{}
-	mi := &file_testdata_example_proto_msgTypes[10]
+	mi := &file_example_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1203,7 +1203,7 @@ func (x *EnumTypes) String() string {
 func (*EnumTypes) ProtoMessage() {}
 
 func (x *EnumTypes) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[10]
+	mi := &file_example_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1216,7 +1216,7 @@ func (x *EnumTypes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnumTypes.ProtoReflect.Descriptor instead.
 func (*EnumTypes) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{10}
+	return file_example_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *EnumTypes) GetStatus() Status {
@@ -1280,7 +1280,7 @@ type RepeatedScalars struct {
 
 func (x *RepeatedScalars) Reset() {
 	*x = RepeatedScalars{}
-	mi := &file_testdata_example_proto_msgTypes[11]
+	mi := &file_example_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1292,7 +1292,7 @@ func (x *RepeatedScalars) String() string {
 func (*RepeatedScalars) ProtoMessage() {}
 
 func (x *RepeatedScalars) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[11]
+	mi := &file_example_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1305,7 +1305,7 @@ func (x *RepeatedScalars) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RepeatedScalars.ProtoReflect.Descriptor instead.
 func (*RepeatedScalars) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{11}
+	return file_example_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *RepeatedScalars) GetDoubleVals() []float64 {
@@ -1474,7 +1474,7 @@ type RepeatedEnums struct {
 
 func (x *RepeatedEnums) Reset() {
 	*x = RepeatedEnums{}
-	mi := &file_testdata_example_proto_msgTypes[12]
+	mi := &file_example_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1486,7 +1486,7 @@ func (x *RepeatedEnums) String() string {
 func (*RepeatedEnums) ProtoMessage() {}
 
 func (x *RepeatedEnums) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[12]
+	mi := &file_example_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1499,7 +1499,7 @@ func (x *RepeatedEnums) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RepeatedEnums.ProtoReflect.Descriptor instead.
 func (*RepeatedEnums) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{12}
+	return file_example_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *RepeatedEnums) GetStatuses() []Status {
@@ -1537,7 +1537,7 @@ type RepeatedMessages struct {
 
 func (x *RepeatedMessages) Reset() {
 	*x = RepeatedMessages{}
-	mi := &file_testdata_example_proto_msgTypes[13]
+	mi := &file_example_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1549,7 +1549,7 @@ func (x *RepeatedMessages) String() string {
 func (*RepeatedMessages) ProtoMessage() {}
 
 func (x *RepeatedMessages) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[13]
+	mi := &file_example_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1562,7 +1562,7 @@ func (x *RepeatedMessages) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RepeatedMessages.ProtoReflect.Descriptor instead.
 func (*RepeatedMessages) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{13}
+	return file_example_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *RepeatedMessages) GetUsers() []*User {
@@ -1625,7 +1625,7 @@ type MapWithStringKey struct {
 
 func (x *MapWithStringKey) Reset() {
 	*x = MapWithStringKey{}
-	mi := &file_testdata_example_proto_msgTypes[14]
+	mi := &file_example_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1637,7 +1637,7 @@ func (x *MapWithStringKey) String() string {
 func (*MapWithStringKey) ProtoMessage() {}
 
 func (x *MapWithStringKey) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[14]
+	mi := &file_example_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1650,7 +1650,7 @@ func (x *MapWithStringKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MapWithStringKey.ProtoReflect.Descriptor instead.
 func (*MapWithStringKey) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{14}
+	return file_example_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *MapWithStringKey) GetStringMap() map[string]string {
@@ -1759,7 +1759,7 @@ type MapWithIntKey struct {
 
 func (x *MapWithIntKey) Reset() {
 	*x = MapWithIntKey{}
-	mi := &file_testdata_example_proto_msgTypes[15]
+	mi := &file_example_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1771,7 +1771,7 @@ func (x *MapWithIntKey) String() string {
 func (*MapWithIntKey) ProtoMessage() {}
 
 func (x *MapWithIntKey) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[15]
+	mi := &file_example_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1784,7 +1784,7 @@ func (x *MapWithIntKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MapWithIntKey.ProtoReflect.Descriptor instead.
 func (*MapWithIntKey) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{15}
+	return file_example_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *MapWithIntKey) GetInt32KeyMap() map[int32]string {
@@ -1883,7 +1883,7 @@ type MapWithBoolKey struct {
 
 func (x *MapWithBoolKey) Reset() {
 	*x = MapWithBoolKey{}
-	mi := &file_testdata_example_proto_msgTypes[16]
+	mi := &file_example_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1895,7 +1895,7 @@ func (x *MapWithBoolKey) String() string {
 func (*MapWithBoolKey) ProtoMessage() {}
 
 func (x *MapWithBoolKey) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[16]
+	mi := &file_example_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1908,7 +1908,7 @@ func (x *MapWithBoolKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MapWithBoolKey.ProtoReflect.Descriptor instead.
 func (*MapWithBoolKey) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{16}
+	return file_example_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *MapWithBoolKey) GetBoolKeyMap() map[bool]string {
@@ -1949,7 +1949,7 @@ type OneofBasic struct {
 
 func (x *OneofBasic) Reset() {
 	*x = OneofBasic{}
-	mi := &file_testdata_example_proto_msgTypes[17]
+	mi := &file_example_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1961,7 +1961,7 @@ func (x *OneofBasic) String() string {
 func (*OneofBasic) ProtoMessage() {}
 
 func (x *OneofBasic) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[17]
+	mi := &file_example_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1974,7 +1974,7 @@ func (x *OneofBasic) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OneofBasic.ProtoReflect.Descriptor instead.
 func (*OneofBasic) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{17}
+	return file_example_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *OneofBasic) GetId() string {
@@ -2076,7 +2076,7 @@ type OneofWithRedact struct {
 
 func (x *OneofWithRedact) Reset() {
 	*x = OneofWithRedact{}
-	mi := &file_testdata_example_proto_msgTypes[18]
+	mi := &file_example_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2088,7 +2088,7 @@ func (x *OneofWithRedact) String() string {
 func (*OneofWithRedact) ProtoMessage() {}
 
 func (x *OneofWithRedact) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[18]
+	mi := &file_example_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2101,7 +2101,7 @@ func (x *OneofWithRedact) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OneofWithRedact.ProtoReflect.Descriptor instead.
 func (*OneofWithRedact) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{18}
+	return file_example_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *OneofWithRedact) GetId() string {
@@ -2229,7 +2229,7 @@ type OneofWithMessage struct {
 
 func (x *OneofWithMessage) Reset() {
 	*x = OneofWithMessage{}
-	mi := &file_testdata_example_proto_msgTypes[19]
+	mi := &file_example_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2241,7 +2241,7 @@ func (x *OneofWithMessage) String() string {
 func (*OneofWithMessage) ProtoMessage() {}
 
 func (x *OneofWithMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[19]
+	mi := &file_example_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2254,7 +2254,7 @@ func (x *OneofWithMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OneofWithMessage.ProtoReflect.Descriptor instead.
 func (*OneofWithMessage) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{19}
+	return file_example_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *OneofWithMessage) GetId() string {
@@ -2377,7 +2377,7 @@ type OneofWithEnum struct {
 
 func (x *OneofWithEnum) Reset() {
 	*x = OneofWithEnum{}
-	mi := &file_testdata_example_proto_msgTypes[20]
+	mi := &file_example_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2389,7 +2389,7 @@ func (x *OneofWithEnum) String() string {
 func (*OneofWithEnum) ProtoMessage() {}
 
 func (x *OneofWithEnum) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[20]
+	mi := &file_example_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2402,7 +2402,7 @@ func (x *OneofWithEnum) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OneofWithEnum.ProtoReflect.Descriptor instead.
 func (*OneofWithEnum) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{20}
+	return file_example_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *OneofWithEnum) GetId() string {
@@ -2521,7 +2521,7 @@ type ComplexMessage struct {
 
 func (x *ComplexMessage) Reset() {
 	*x = ComplexMessage{}
-	mi := &file_testdata_example_proto_msgTypes[21]
+	mi := &file_example_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2533,7 +2533,7 @@ func (x *ComplexMessage) String() string {
 func (*ComplexMessage) ProtoMessage() {}
 
 func (x *ComplexMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[21]
+	mi := &file_example_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2546,7 +2546,7 @@ func (x *ComplexMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComplexMessage.ProtoReflect.Descriptor instead.
 func (*ComplexMessage) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{21}
+	return file_example_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ComplexMessage) GetId() string {
@@ -2823,7 +2823,7 @@ type EmptyMessage struct {
 
 func (x *EmptyMessage) Reset() {
 	*x = EmptyMessage{}
-	mi := &file_testdata_example_proto_msgTypes[22]
+	mi := &file_example_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2835,7 +2835,7 @@ func (x *EmptyMessage) String() string {
 func (*EmptyMessage) ProtoMessage() {}
 
 func (x *EmptyMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[22]
+	mi := &file_example_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2848,7 +2848,7 @@ func (x *EmptyMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EmptyMessage.ProtoReflect.Descriptor instead.
 func (*EmptyMessage) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{22}
+	return file_example_proto_rawDescGZIP(), []int{22}
 }
 
 // MessageWithOnlyRedact - Message with only redact fields
@@ -2862,7 +2862,7 @@ type MessageWithOnlyRedact struct {
 
 func (x *MessageWithOnlyRedact) Reset() {
 	*x = MessageWithOnlyRedact{}
-	mi := &file_testdata_example_proto_msgTypes[23]
+	mi := &file_example_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2874,7 +2874,7 @@ func (x *MessageWithOnlyRedact) String() string {
 func (*MessageWithOnlyRedact) ProtoMessage() {}
 
 func (x *MessageWithOnlyRedact) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[23]
+	mi := &file_example_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2887,7 +2887,7 @@ func (x *MessageWithOnlyRedact) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageWithOnlyRedact.ProtoReflect.Descriptor instead.
 func (*MessageWithOnlyRedact) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{23}
+	return file_example_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *MessageWithOnlyRedact) GetPassword() string {
@@ -2916,7 +2916,7 @@ type MessageWithNoRedact struct {
 
 func (x *MessageWithNoRedact) Reset() {
 	*x = MessageWithNoRedact{}
-	mi := &file_testdata_example_proto_msgTypes[24]
+	mi := &file_example_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2928,7 +2928,7 @@ func (x *MessageWithNoRedact) String() string {
 func (*MessageWithNoRedact) ProtoMessage() {}
 
 func (x *MessageWithNoRedact) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[24]
+	mi := &file_example_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2941,7 +2941,7 @@ func (x *MessageWithNoRedact) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageWithNoRedact.ProtoReflect.Descriptor instead.
 func (*MessageWithNoRedact) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{24}
+	return file_example_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *MessageWithNoRedact) GetId() string {
@@ -2975,7 +2975,7 @@ type Level4 struct {
 
 func (x *Level4) Reset() {
 	*x = Level4{}
-	mi := &file_testdata_example_proto_msgTypes[25]
+	mi := &file_example_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2987,7 +2987,7 @@ func (x *Level4) String() string {
 func (*Level4) ProtoMessage() {}
 
 func (x *Level4) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[25]
+	mi := &file_example_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3000,7 +3000,7 @@ func (x *Level4) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Level4.ProtoReflect.Descriptor instead.
 func (*Level4) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{25}
+	return file_example_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *Level4) GetSecret() string {
@@ -3020,7 +3020,7 @@ type Level3 struct {
 
 func (x *Level3) Reset() {
 	*x = Level3{}
-	mi := &file_testdata_example_proto_msgTypes[26]
+	mi := &file_example_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3032,7 +3032,7 @@ func (x *Level3) String() string {
 func (*Level3) ProtoMessage() {}
 
 func (x *Level3) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[26]
+	mi := &file_example_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3045,7 +3045,7 @@ func (x *Level3) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Level3.ProtoReflect.Descriptor instead.
 func (*Level3) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{26}
+	return file_example_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *Level3) GetName() string {
@@ -3072,7 +3072,7 @@ type Level2 struct {
 
 func (x *Level2) Reset() {
 	*x = Level2{}
-	mi := &file_testdata_example_proto_msgTypes[27]
+	mi := &file_example_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3084,7 +3084,7 @@ func (x *Level2) String() string {
 func (*Level2) ProtoMessage() {}
 
 func (x *Level2) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[27]
+	mi := &file_example_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3097,7 +3097,7 @@ func (x *Level2) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Level2.ProtoReflect.Descriptor instead.
 func (*Level2) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{27}
+	return file_example_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *Level2) GetName() string {
@@ -3124,7 +3124,7 @@ type Level1 struct {
 
 func (x *Level1) Reset() {
 	*x = Level1{}
-	mi := &file_testdata_example_proto_msgTypes[28]
+	mi := &file_example_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3136,7 +3136,7 @@ func (x *Level1) String() string {
 func (*Level1) ProtoMessage() {}
 
 func (x *Level1) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[28]
+	mi := &file_example_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3149,7 +3149,7 @@ func (x *Level1) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Level1.ProtoReflect.Descriptor instead.
 func (*Level1) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{28}
+	return file_example_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *Level1) GetName() string {
@@ -3181,7 +3181,7 @@ type SpecialCharacters struct {
 
 func (x *SpecialCharacters) Reset() {
 	*x = SpecialCharacters{}
-	mi := &file_testdata_example_proto_msgTypes[29]
+	mi := &file_example_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3193,7 +3193,7 @@ func (x *SpecialCharacters) String() string {
 func (*SpecialCharacters) ProtoMessage() {}
 
 func (x *SpecialCharacters) ProtoReflect() protoreflect.Message {
-	mi := &file_testdata_example_proto_msgTypes[29]
+	mi := &file_example_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3206,7 +3206,7 @@ func (x *SpecialCharacters) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SpecialCharacters.ProtoReflect.Descriptor instead.
 func (*SpecialCharacters) Descriptor() ([]byte, []int) {
-	return file_testdata_example_proto_rawDescGZIP(), []int{29}
+	return file_example_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *SpecialCharacters) GetNormal() string {
@@ -3251,11 +3251,239 @@ func (x *SpecialCharacters) GetEmoji() string {
 	return ""
 }
 
-var File_testdata_example_proto protoreflect.FileDescriptor
+// CustomMaskTypes - Tests custom mask values for all supported scalar types
+type CustomMaskTypes struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// String with custom mask
+	Password string `protobuf:"bytes,1,opt,name=password,proto3" json:"password,omitempty"`
+	// Integer types with custom mask (-1 indicates redacted)
+	SecretInt32    int32  `protobuf:"varint,2,opt,name=secret_int32,json=secretInt32,proto3" json:"secret_int32,omitempty"`
+	SecretInt64    int64  `protobuf:"varint,3,opt,name=secret_int64,json=secretInt64,proto3" json:"secret_int64,omitempty"`
+	SecretUint32   uint32 `protobuf:"varint,4,opt,name=secret_uint32,json=secretUint32,proto3" json:"secret_uint32,omitempty"`
+	SecretUint64   uint64 `protobuf:"varint,5,opt,name=secret_uint64,json=secretUint64,proto3" json:"secret_uint64,omitempty"`
+	SecretSint32   int32  `protobuf:"zigzag32,6,opt,name=secret_sint32,json=secretSint32,proto3" json:"secret_sint32,omitempty"`
+	SecretSint64   int64  `protobuf:"zigzag64,7,opt,name=secret_sint64,json=secretSint64,proto3" json:"secret_sint64,omitempty"`
+	SecretFixed32  uint32 `protobuf:"fixed32,8,opt,name=secret_fixed32,json=secretFixed32,proto3" json:"secret_fixed32,omitempty"`
+	SecretFixed64  uint64 `protobuf:"fixed64,9,opt,name=secret_fixed64,json=secretFixed64,proto3" json:"secret_fixed64,omitempty"`
+	SecretSfixed32 int32  `protobuf:"fixed32,10,opt,name=secret_sfixed32,json=secretSfixed32,proto3" json:"secret_sfixed32,omitempty"`
+	SecretSfixed64 int64  `protobuf:"fixed64,11,opt,name=secret_sfixed64,json=secretSfixed64,proto3" json:"secret_sfixed64,omitempty"`
+	// Float/Double types with custom mask
+	SecretFloat  float32 `protobuf:"fixed32,12,opt,name=secret_float,json=secretFloat,proto3" json:"secret_float,omitempty"`
+	SecretDouble float64 `protobuf:"fixed64,13,opt,name=secret_double,json=secretDouble,proto3" json:"secret_double,omitempty"`
+	// Bool with custom mask (mask to true instead of default false)
+	SecretBool bool `protobuf:"varint,14,opt,name=secret_bool,json=secretBool,proto3" json:"secret_bool,omitempty"`
+	// Bytes with custom mask
+	SecretBytes []byte `protobuf:"bytes,15,opt,name=secret_bytes,json=secretBytes,proto3" json:"secret_bytes,omitempty"`
+	// Enum with custom mask (mask to specific enum value)
+	SecretStatus   Status   `protobuf:"varint,16,opt,name=secret_status,json=secretStatus,proto3,enum=testdata.Status" json:"secret_status,omitempty"`
+	SecretPriority Priority `protobuf:"varint,17,opt,name=secret_priority,json=secretPriority,proto3,enum=testdata.Priority" json:"secret_priority,omitempty"`
+	// Non-redacted fields for comparison
+	PublicString  string  `protobuf:"bytes,20,opt,name=public_string,json=publicString,proto3" json:"public_string,omitempty"`
+	PublicInt64   int64   `protobuf:"varint,21,opt,name=public_int64,json=publicInt64,proto3" json:"public_int64,omitempty"`
+	PublicDouble  float64 `protobuf:"fixed64,22,opt,name=public_double,json=publicDouble,proto3" json:"public_double,omitempty"`
+	PublicBool    bool    `protobuf:"varint,23,opt,name=public_bool,json=publicBool,proto3" json:"public_bool,omitempty"`
+	PublicBytes   []byte  `protobuf:"bytes,24,opt,name=public_bytes,json=publicBytes,proto3" json:"public_bytes,omitempty"`
+	PublicStatus  Status  `protobuf:"varint,25,opt,name=public_status,json=publicStatus,proto3,enum=testdata.Status" json:"public_status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
 
-const file_testdata_example_proto_rawDesc = "" +
+func (x *CustomMaskTypes) Reset() {
+	*x = CustomMaskTypes{}
+	mi := &file_example_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CustomMaskTypes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CustomMaskTypes) ProtoMessage() {}
+
+func (x *CustomMaskTypes) ProtoReflect() protoreflect.Message {
+	mi := &file_example_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CustomMaskTypes.ProtoReflect.Descriptor instead.
+func (*CustomMaskTypes) Descriptor() ([]byte, []int) {
+	return file_example_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *CustomMaskTypes) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+func (x *CustomMaskTypes) GetSecretInt32() int32 {
+	if x != nil {
+		return x.SecretInt32
+	}
+	return 0
+}
+
+func (x *CustomMaskTypes) GetSecretInt64() int64 {
+	if x != nil {
+		return x.SecretInt64
+	}
+	return 0
+}
+
+func (x *CustomMaskTypes) GetSecretUint32() uint32 {
+	if x != nil {
+		return x.SecretUint32
+	}
+	return 0
+}
+
+func (x *CustomMaskTypes) GetSecretUint64() uint64 {
+	if x != nil {
+		return x.SecretUint64
+	}
+	return 0
+}
+
+func (x *CustomMaskTypes) GetSecretSint32() int32 {
+	if x != nil {
+		return x.SecretSint32
+	}
+	return 0
+}
+
+func (x *CustomMaskTypes) GetSecretSint64() int64 {
+	if x != nil {
+		return x.SecretSint64
+	}
+	return 0
+}
+
+func (x *CustomMaskTypes) GetSecretFixed32() uint32 {
+	if x != nil {
+		return x.SecretFixed32
+	}
+	return 0
+}
+
+func (x *CustomMaskTypes) GetSecretFixed64() uint64 {
+	if x != nil {
+		return x.SecretFixed64
+	}
+	return 0
+}
+
+func (x *CustomMaskTypes) GetSecretSfixed32() int32 {
+	if x != nil {
+		return x.SecretSfixed32
+	}
+	return 0
+}
+
+func (x *CustomMaskTypes) GetSecretSfixed64() int64 {
+	if x != nil {
+		return x.SecretSfixed64
+	}
+	return 0
+}
+
+func (x *CustomMaskTypes) GetSecretFloat() float32 {
+	if x != nil {
+		return x.SecretFloat
+	}
+	return 0
+}
+
+func (x *CustomMaskTypes) GetSecretDouble() float64 {
+	if x != nil {
+		return x.SecretDouble
+	}
+	return 0
+}
+
+func (x *CustomMaskTypes) GetSecretBool() bool {
+	if x != nil {
+		return x.SecretBool
+	}
+	return false
+}
+
+func (x *CustomMaskTypes) GetSecretBytes() []byte {
+	if x != nil {
+		return x.SecretBytes
+	}
+	return nil
+}
+
+func (x *CustomMaskTypes) GetSecretStatus() Status {
+	if x != nil {
+		return x.SecretStatus
+	}
+	return Status_STATUS_UNSPECIFIED
+}
+
+func (x *CustomMaskTypes) GetSecretPriority() Priority {
+	if x != nil {
+		return x.SecretPriority
+	}
+	return Priority_PRIORITY_UNSPECIFIED
+}
+
+func (x *CustomMaskTypes) GetPublicString() string {
+	if x != nil {
+		return x.PublicString
+	}
+	return ""
+}
+
+func (x *CustomMaskTypes) GetPublicInt64() int64 {
+	if x != nil {
+		return x.PublicInt64
+	}
+	return 0
+}
+
+func (x *CustomMaskTypes) GetPublicDouble() float64 {
+	if x != nil {
+		return x.PublicDouble
+	}
+	return 0
+}
+
+func (x *CustomMaskTypes) GetPublicBool() bool {
+	if x != nil {
+		return x.PublicBool
+	}
+	return false
+}
+
+func (x *CustomMaskTypes) GetPublicBytes() []byte {
+	if x != nil {
+		return x.PublicBytes
+	}
+	return nil
+}
+
+func (x *CustomMaskTypes) GetPublicStatus() Status {
+	if x != nil {
+		return x.PublicStatus
+	}
+	return Status_STATUS_UNSPECIFIED
+}
+
+var File_example_proto protoreflect.FileDescriptor
+
+const file_example_proto_rawDesc = "" +
 	"\n" +
-	"\x16testdata/example.proto\x12\btestdata\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19google/protobuf/any.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1akit/redact/v1/redact.proto\"\xaf\x01\n" +
+	"\rexample.proto\x12\btestdata\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19google/protobuf/any.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1akit/redact/v1/redact.proto\"\xaf\x01\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1c\n" +
@@ -3657,7 +3885,35 @@ const file_testdata_example_proto_rawDesc = "" +
 	"back\\slashR\rwithBackslash\x127\n" +
 	"\fwith_newline\x18\x04 \x01(\tB\x14¢3\x10\b\x01\x12\fline1\\nline2R\vwithNewline\x12-\n" +
 	"\aunicode\x18\x05 \x01(\tB\x13¢3\x0f\b\x01\x12\vHello WorldR\aunicode\x12&\n" +
-	"\x05emoji\x18\x06 \x01(\tB\x10¢3\f\b\x01\x12\b[LOCKED]R\x05emoji*\\\n" +
+	"\x05emoji\x18\x06 \x01(\tB\x10¢3\f\b\x01\x12\b[LOCKED]R\x05emoji\"\x93\t\n" +
+	"\x0fCustomMaskTypes\x12.\n" +
+	"\bpassword\x18\x01 \x01(\tB\x12¢3\x0e\b\x01\x12\n" +
+	"[PASSWORD]R\bpassword\x124\n" +
+	"\fsecret_int32\x18\x02 \x01(\x05B\x11¢3\r\b\x01\x18\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01R\vsecretInt32\x124\n" +
+	"\fsecret_int64\x18\x03 \x01(\x03B\x11¢3\r\b\x01\x18\x99\xf8\xff\xff\xff\xff\xff\xff\xff\x01R\vsecretInt64\x12.\n" +
+	"\rsecret_uint32\x18\x04 \x01(\rB\t¢3\x05\b\x01\x18\x8fNR\fsecretUint32\x12.\n" +
+	"\rsecret_uint64\x18\x05 \x01(\x04B\t¢3\x05\b\x01\x18\xb8ER\fsecretUint64\x126\n" +
+	"\rsecret_sint32\x18\x06 \x01(\x11B\x11¢3\r\b\x01\x18\x9c\xff\xff\xff\xff\xff\xff\xff\xff\x01R\fsecretSint32\x126\n" +
+	"\rsecret_sint64\x18\a \x01(\x12B\x11¢3\r\b\x01\x18\xb8\xfe\xff\xff\xff\xff\xff\xff\xff\x01R\fsecretSint64\x120\n" +
+	"\x0esecret_fixed32\x18\b \x01(\aB\t¢3\x05\b\x01\x18\xd7\bR\rsecretFixed32\x120\n" +
+	"\x0esecret_fixed64\x18\t \x01(\x06B\t¢3\x05\b\x01\x18\xae\x11R\rsecretFixed64\x12:\n" +
+	"\x0fsecret_sfixed32\x18\n" +
+	" \x01(\x0fB\x11¢3\r\b\x01\x18\xb3\xfd\xff\xff\xff\xff\xff\xff\xff\x01R\x0esecretSfixed32\x12:\n" +
+	"\x0fsecret_sfixed64\x18\v \x01(\x10B\x11¢3\r\b\x01\x18\xc4\xfc\xff\xff\xff\xff\xff\xff\xff\x01R\x0esecretSfixed64\x122\n" +
+	"\fsecret_float\x18\f \x01(\x02B\x0f¢3\v\b\x01!\x00\x00\x00\x00\x00\x00\xf8\xbfR\vsecretFloat\x124\n" +
+	"\rsecret_double\x18\r \x01(\x01B\x0f¢3\v\b\x01!R\xb8\x1e\x85\xeb?\x8f\xc0R\fsecretDouble\x12)\n" +
+	"\vsecret_bool\x18\x0e \x01(\bB\b¢3\x04\b\x01(\x01R\n" +
+	"secretBool\x123\n" +
+	"\fsecret_bytes\x18\x0f \x01(\fB\x10¢3\f\b\x012\b[BINARY]R\vsecretBytes\x12?\n" +
+	"\rsecret_status\x18\x10 \x01(\x0e2\x10.testdata.StatusB\b¢3\x04\b\x018cR\fsecretStatus\x12E\n" +
+	"\x0fsecret_priority\x18\x11 \x01(\x0e2\x12.testdata.PriorityB\b¢3\x04\b\x018\x01R\x0esecretPriority\x12#\n" +
+	"\rpublic_string\x18\x14 \x01(\tR\fpublicString\x12!\n" +
+	"\fpublic_int64\x18\x15 \x01(\x03R\vpublicInt64\x12#\n" +
+	"\rpublic_double\x18\x16 \x01(\x01R\fpublicDouble\x12\x1f\n" +
+	"\vpublic_bool\x18\x17 \x01(\bR\n" +
+	"publicBool\x12!\n" +
+	"\fpublic_bytes\x18\x18 \x01(\fR\vpublicBytes\x125\n" +
+	"\rpublic_status\x18\x19 \x01(\x0e2\x10.testdata.StatusR\fpublicStatus*\\\n" +
 	"\x06Status\x12\x16\n" +
 	"\x12STATUS_UNSPECIFIED\x10\x00\x12\x11\n" +
 	"\rSTATUS_ACTIVE\x10\x01\x12\x13\n" +
@@ -3671,20 +3927,20 @@ const file_testdata_example_proto_rawDesc = "" +
 	"\x11PRIORITY_CRITICAL\x10\x04BEZCgithub.com/crypto-zero/go-kit/logging/protoc-gen-go-redact/testdatab\x06proto3"
 
 var (
-	file_testdata_example_proto_rawDescOnce sync.Once
-	file_testdata_example_proto_rawDescData []byte
+	file_example_proto_rawDescOnce sync.Once
+	file_example_proto_rawDescData []byte
 )
 
-func file_testdata_example_proto_rawDescGZIP() []byte {
-	file_testdata_example_proto_rawDescOnce.Do(func() {
-		file_testdata_example_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_testdata_example_proto_rawDesc), len(file_testdata_example_proto_rawDesc)))
+func file_example_proto_rawDescGZIP() []byte {
+	file_example_proto_rawDescOnce.Do(func() {
+		file_example_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_example_proto_rawDesc), len(file_example_proto_rawDesc)))
 	})
-	return file_testdata_example_proto_rawDescData
+	return file_example_proto_rawDescData
 }
 
-var file_testdata_example_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_testdata_example_proto_msgTypes = make([]protoimpl.MessageInfo, 62)
-var file_testdata_example_proto_goTypes = []any{
+var file_example_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_example_proto_msgTypes = make([]protoimpl.MessageInfo, 63)
+var file_example_proto_goTypes = []any{
 	(Status)(0),                    // 0: testdata.Status
 	(Priority)(0),                  // 1: testdata.Priority
 	(*User)(nil),                   // 2: testdata.User
@@ -3717,55 +3973,56 @@ var file_testdata_example_proto_goTypes = []any{
 	(*Level2)(nil),                 // 29: testdata.Level2
 	(*Level1)(nil),                 // 30: testdata.Level1
 	(*SpecialCharacters)(nil),      // 31: testdata.SpecialCharacters
-	nil,                            // 32: testdata.MapWithStringKey.StringMapEntry
-	nil,                            // 33: testdata.MapWithStringKey.Int32MapEntry
-	nil,                            // 34: testdata.MapWithStringKey.Int64MapEntry
-	nil,                            // 35: testdata.MapWithStringKey.DoubleMapEntry
-	nil,                            // 36: testdata.MapWithStringKey.BoolMapEntry
-	nil,                            // 37: testdata.MapWithStringKey.BytesMapEntry
-	nil,                            // 38: testdata.MapWithStringKey.UserMapEntry
-	nil,                            // 39: testdata.MapWithStringKey.AddressMapEntry
-	nil,                            // 40: testdata.MapWithStringKey.StatusMapEntry
-	nil,                            // 41: testdata.MapWithStringKey.RedactStringMapEntry
-	nil,                            // 42: testdata.MapWithStringKey.RedactInt64MapEntry
-	nil,                            // 43: testdata.MapWithStringKey.RedactUserMapEntry
-	nil,                            // 44: testdata.MapWithIntKey.Int32KeyMapEntry
-	nil,                            // 45: testdata.MapWithIntKey.Int64KeyMapEntry
-	nil,                            // 46: testdata.MapWithIntKey.Uint32KeyMapEntry
-	nil,                            // 47: testdata.MapWithIntKey.Uint64KeyMapEntry
-	nil,                            // 48: testdata.MapWithIntKey.Sint32KeyMapEntry
-	nil,                            // 49: testdata.MapWithIntKey.Sint64KeyMapEntry
-	nil,                            // 50: testdata.MapWithIntKey.Fixed32KeyMapEntry
-	nil,                            // 51: testdata.MapWithIntKey.Fixed64KeyMapEntry
-	nil,                            // 52: testdata.MapWithIntKey.Sfixed32KeyMapEntry
-	nil,                            // 53: testdata.MapWithIntKey.Sfixed64KeyMapEntry
-	nil,                            // 54: testdata.MapWithIntKey.RedactInt32KeyMapEntry
-	nil,                            // 55: testdata.MapWithIntKey.RedactInt64UserMapEntry
-	nil,                            // 56: testdata.MapWithBoolKey.BoolKeyMapEntry
-	nil,                            // 57: testdata.MapWithBoolKey.BoolUserMapEntry
-	nil,                            // 58: testdata.MapWithBoolKey.RedactBoolKeyMapEntry
-	nil,                            // 59: testdata.ComplexMessage.LabelsEntry
-	nil,                            // 60: testdata.ComplexMessage.AssigneesEntry
-	nil,                            // 61: testdata.ComplexMessage.RedactLabelsEntry
-	nil,                            // 62: testdata.ComplexMessage.RedactAssigneesEntry
-	nil,                            // 63: testdata.ComplexMessage.IndexedDataEntry
-	(*timestamppb.Timestamp)(nil),  // 64: google.protobuf.Timestamp
-	(*durationpb.Duration)(nil),    // 65: google.protobuf.Duration
-	(*wrapperspb.StringValue)(nil), // 66: google.protobuf.StringValue
-	(*wrapperspb.Int32Value)(nil),  // 67: google.protobuf.Int32Value
-	(*wrapperspb.Int64Value)(nil),  // 68: google.protobuf.Int64Value
-	(*wrapperspb.FloatValue)(nil),  // 69: google.protobuf.FloatValue
-	(*wrapperspb.DoubleValue)(nil), // 70: google.protobuf.DoubleValue
-	(*wrapperspb.BoolValue)(nil),   // 71: google.protobuf.BoolValue
-	(*wrapperspb.BytesValue)(nil),  // 72: google.protobuf.BytesValue
-	(*wrapperspb.UInt32Value)(nil), // 73: google.protobuf.UInt32Value
-	(*wrapperspb.UInt64Value)(nil), // 74: google.protobuf.UInt64Value
-	(*anypb.Any)(nil),              // 75: google.protobuf.Any
-	(*structpb.Struct)(nil),        // 76: google.protobuf.Struct
-	(*structpb.Value)(nil),         // 77: google.protobuf.Value
-	(*structpb.ListValue)(nil),     // 78: google.protobuf.ListValue
+	(*CustomMaskTypes)(nil),        // 32: testdata.CustomMaskTypes
+	nil,                            // 33: testdata.MapWithStringKey.StringMapEntry
+	nil,                            // 34: testdata.MapWithStringKey.Int32MapEntry
+	nil,                            // 35: testdata.MapWithStringKey.Int64MapEntry
+	nil,                            // 36: testdata.MapWithStringKey.DoubleMapEntry
+	nil,                            // 37: testdata.MapWithStringKey.BoolMapEntry
+	nil,                            // 38: testdata.MapWithStringKey.BytesMapEntry
+	nil,                            // 39: testdata.MapWithStringKey.UserMapEntry
+	nil,                            // 40: testdata.MapWithStringKey.AddressMapEntry
+	nil,                            // 41: testdata.MapWithStringKey.StatusMapEntry
+	nil,                            // 42: testdata.MapWithStringKey.RedactStringMapEntry
+	nil,                            // 43: testdata.MapWithStringKey.RedactInt64MapEntry
+	nil,                            // 44: testdata.MapWithStringKey.RedactUserMapEntry
+	nil,                            // 45: testdata.MapWithIntKey.Int32KeyMapEntry
+	nil,                            // 46: testdata.MapWithIntKey.Int64KeyMapEntry
+	nil,                            // 47: testdata.MapWithIntKey.Uint32KeyMapEntry
+	nil,                            // 48: testdata.MapWithIntKey.Uint64KeyMapEntry
+	nil,                            // 49: testdata.MapWithIntKey.Sint32KeyMapEntry
+	nil,                            // 50: testdata.MapWithIntKey.Sint64KeyMapEntry
+	nil,                            // 51: testdata.MapWithIntKey.Fixed32KeyMapEntry
+	nil,                            // 52: testdata.MapWithIntKey.Fixed64KeyMapEntry
+	nil,                            // 53: testdata.MapWithIntKey.Sfixed32KeyMapEntry
+	nil,                            // 54: testdata.MapWithIntKey.Sfixed64KeyMapEntry
+	nil,                            // 55: testdata.MapWithIntKey.RedactInt32KeyMapEntry
+	nil,                            // 56: testdata.MapWithIntKey.RedactInt64UserMapEntry
+	nil,                            // 57: testdata.MapWithBoolKey.BoolKeyMapEntry
+	nil,                            // 58: testdata.MapWithBoolKey.BoolUserMapEntry
+	nil,                            // 59: testdata.MapWithBoolKey.RedactBoolKeyMapEntry
+	nil,                            // 60: testdata.ComplexMessage.LabelsEntry
+	nil,                            // 61: testdata.ComplexMessage.AssigneesEntry
+	nil,                            // 62: testdata.ComplexMessage.RedactLabelsEntry
+	nil,                            // 63: testdata.ComplexMessage.RedactAssigneesEntry
+	nil,                            // 64: testdata.ComplexMessage.IndexedDataEntry
+	(*timestamppb.Timestamp)(nil),  // 65: google.protobuf.Timestamp
+	(*durationpb.Duration)(nil),    // 66: google.protobuf.Duration
+	(*wrapperspb.StringValue)(nil), // 67: google.protobuf.StringValue
+	(*wrapperspb.Int32Value)(nil),  // 68: google.protobuf.Int32Value
+	(*wrapperspb.Int64Value)(nil),  // 69: google.protobuf.Int64Value
+	(*wrapperspb.FloatValue)(nil),  // 70: google.protobuf.FloatValue
+	(*wrapperspb.DoubleValue)(nil), // 71: google.protobuf.DoubleValue
+	(*wrapperspb.BoolValue)(nil),   // 72: google.protobuf.BoolValue
+	(*wrapperspb.BytesValue)(nil),  // 73: google.protobuf.BytesValue
+	(*wrapperspb.UInt32Value)(nil), // 74: google.protobuf.UInt32Value
+	(*wrapperspb.UInt64Value)(nil), // 75: google.protobuf.UInt64Value
+	(*anypb.Any)(nil),              // 76: google.protobuf.Any
+	(*structpb.Struct)(nil),        // 77: google.protobuf.Struct
+	(*structpb.Value)(nil),         // 78: google.protobuf.Value
+	(*structpb.ListValue)(nil),     // 79: google.protobuf.ListValue
 }
-var file_testdata_example_proto_depIdxs = []int32{
+var file_example_proto_depIdxs = []int32{
 	2,   // 0: testdata.Account.user:type_name -> testdata.User
 	3,   // 1: testdata.Account.billing_address:type_name -> testdata.Address
 	3,   // 2: testdata.Account.shipping_address:type_name -> testdata.Address
@@ -3773,28 +4030,28 @@ var file_testdata_example_proto_depIdxs = []int32{
 	3,   // 4: testdata.Department.address:type_name -> testdata.Address
 	5,   // 5: testdata.Organization.departments:type_name -> testdata.Department
 	3,   // 6: testdata.Organization.headquarters:type_name -> testdata.Address
-	64,  // 7: testdata.Event.created_at:type_name -> google.protobuf.Timestamp
-	64,  // 8: testdata.Event.updated_at:type_name -> google.protobuf.Timestamp
-	64,  // 9: testdata.Event.secret_time:type_name -> google.protobuf.Timestamp
-	65,  // 10: testdata.Task.timeout:type_name -> google.protobuf.Duration
-	65,  // 11: testdata.Task.secret_duration:type_name -> google.protobuf.Duration
-	66,  // 12: testdata.WrapperTypes.string_val:type_name -> google.protobuf.StringValue
-	67,  // 13: testdata.WrapperTypes.int32_val:type_name -> google.protobuf.Int32Value
-	68,  // 14: testdata.WrapperTypes.int64_val:type_name -> google.protobuf.Int64Value
-	69,  // 15: testdata.WrapperTypes.float_val:type_name -> google.protobuf.FloatValue
-	70,  // 16: testdata.WrapperTypes.double_val:type_name -> google.protobuf.DoubleValue
-	71,  // 17: testdata.WrapperTypes.bool_val:type_name -> google.protobuf.BoolValue
-	72,  // 18: testdata.WrapperTypes.bytes_val:type_name -> google.protobuf.BytesValue
-	73,  // 19: testdata.WrapperTypes.uint32_val:type_name -> google.protobuf.UInt32Value
-	74,  // 20: testdata.WrapperTypes.uint64_val:type_name -> google.protobuf.UInt64Value
-	66,  // 21: testdata.WrapperTypes.secret_string:type_name -> google.protobuf.StringValue
-	68,  // 22: testdata.WrapperTypes.secret_int:type_name -> google.protobuf.Int64Value
-	75,  // 23: testdata.AnyAndStruct.payload:type_name -> google.protobuf.Any
-	75,  // 24: testdata.AnyAndStruct.secret_payload:type_name -> google.protobuf.Any
-	76,  // 25: testdata.AnyAndStruct.metadata:type_name -> google.protobuf.Struct
-	76,  // 26: testdata.AnyAndStruct.secret_metadata:type_name -> google.protobuf.Struct
-	77,  // 27: testdata.AnyAndStruct.value:type_name -> google.protobuf.Value
-	78,  // 28: testdata.AnyAndStruct.list_value:type_name -> google.protobuf.ListValue
+	65,  // 7: testdata.Event.created_at:type_name -> google.protobuf.Timestamp
+	65,  // 8: testdata.Event.updated_at:type_name -> google.protobuf.Timestamp
+	65,  // 9: testdata.Event.secret_time:type_name -> google.protobuf.Timestamp
+	66,  // 10: testdata.Task.timeout:type_name -> google.protobuf.Duration
+	66,  // 11: testdata.Task.secret_duration:type_name -> google.protobuf.Duration
+	67,  // 12: testdata.WrapperTypes.string_val:type_name -> google.protobuf.StringValue
+	68,  // 13: testdata.WrapperTypes.int32_val:type_name -> google.protobuf.Int32Value
+	69,  // 14: testdata.WrapperTypes.int64_val:type_name -> google.protobuf.Int64Value
+	70,  // 15: testdata.WrapperTypes.float_val:type_name -> google.protobuf.FloatValue
+	71,  // 16: testdata.WrapperTypes.double_val:type_name -> google.protobuf.DoubleValue
+	72,  // 17: testdata.WrapperTypes.bool_val:type_name -> google.protobuf.BoolValue
+	73,  // 18: testdata.WrapperTypes.bytes_val:type_name -> google.protobuf.BytesValue
+	74,  // 19: testdata.WrapperTypes.uint32_val:type_name -> google.protobuf.UInt32Value
+	75,  // 20: testdata.WrapperTypes.uint64_val:type_name -> google.protobuf.UInt64Value
+	67,  // 21: testdata.WrapperTypes.secret_string:type_name -> google.protobuf.StringValue
+	69,  // 22: testdata.WrapperTypes.secret_int:type_name -> google.protobuf.Int64Value
+	76,  // 23: testdata.AnyAndStruct.payload:type_name -> google.protobuf.Any
+	76,  // 24: testdata.AnyAndStruct.secret_payload:type_name -> google.protobuf.Any
+	77,  // 25: testdata.AnyAndStruct.metadata:type_name -> google.protobuf.Struct
+	77,  // 26: testdata.AnyAndStruct.secret_metadata:type_name -> google.protobuf.Struct
+	78,  // 27: testdata.AnyAndStruct.value:type_name -> google.protobuf.Value
+	79,  // 28: testdata.AnyAndStruct.list_value:type_name -> google.protobuf.ListValue
 	0,   // 29: testdata.EnumTypes.status:type_name -> testdata.Status
 	1,   // 30: testdata.EnumTypes.priority:type_name -> testdata.Priority
 	0,   // 31: testdata.EnumTypes.redact_status:type_name -> testdata.Status
@@ -3805,35 +4062,35 @@ var file_testdata_example_proto_depIdxs = []int32{
 	2,   // 36: testdata.RepeatedMessages.users:type_name -> testdata.User
 	3,   // 37: testdata.RepeatedMessages.addresses:type_name -> testdata.Address
 	2,   // 38: testdata.RepeatedMessages.redact_users:type_name -> testdata.User
-	64,  // 39: testdata.RepeatedMessages.timestamps:type_name -> google.protobuf.Timestamp
-	64,  // 40: testdata.RepeatedMessages.redact_timestamps:type_name -> google.protobuf.Timestamp
-	32,  // 41: testdata.MapWithStringKey.string_map:type_name -> testdata.MapWithStringKey.StringMapEntry
-	33,  // 42: testdata.MapWithStringKey.int32_map:type_name -> testdata.MapWithStringKey.Int32MapEntry
-	34,  // 43: testdata.MapWithStringKey.int64_map:type_name -> testdata.MapWithStringKey.Int64MapEntry
-	35,  // 44: testdata.MapWithStringKey.double_map:type_name -> testdata.MapWithStringKey.DoubleMapEntry
-	36,  // 45: testdata.MapWithStringKey.bool_map:type_name -> testdata.MapWithStringKey.BoolMapEntry
-	37,  // 46: testdata.MapWithStringKey.bytes_map:type_name -> testdata.MapWithStringKey.BytesMapEntry
-	38,  // 47: testdata.MapWithStringKey.user_map:type_name -> testdata.MapWithStringKey.UserMapEntry
-	39,  // 48: testdata.MapWithStringKey.address_map:type_name -> testdata.MapWithStringKey.AddressMapEntry
-	40,  // 49: testdata.MapWithStringKey.status_map:type_name -> testdata.MapWithStringKey.StatusMapEntry
-	41,  // 50: testdata.MapWithStringKey.redact_string_map:type_name -> testdata.MapWithStringKey.RedactStringMapEntry
-	42,  // 51: testdata.MapWithStringKey.redact_int64_map:type_name -> testdata.MapWithStringKey.RedactInt64MapEntry
-	43,  // 52: testdata.MapWithStringKey.redact_user_map:type_name -> testdata.MapWithStringKey.RedactUserMapEntry
-	44,  // 53: testdata.MapWithIntKey.int32_key_map:type_name -> testdata.MapWithIntKey.Int32KeyMapEntry
-	45,  // 54: testdata.MapWithIntKey.int64_key_map:type_name -> testdata.MapWithIntKey.Int64KeyMapEntry
-	46,  // 55: testdata.MapWithIntKey.uint32_key_map:type_name -> testdata.MapWithIntKey.Uint32KeyMapEntry
-	47,  // 56: testdata.MapWithIntKey.uint64_key_map:type_name -> testdata.MapWithIntKey.Uint64KeyMapEntry
-	48,  // 57: testdata.MapWithIntKey.sint32_key_map:type_name -> testdata.MapWithIntKey.Sint32KeyMapEntry
-	49,  // 58: testdata.MapWithIntKey.sint64_key_map:type_name -> testdata.MapWithIntKey.Sint64KeyMapEntry
-	50,  // 59: testdata.MapWithIntKey.fixed32_key_map:type_name -> testdata.MapWithIntKey.Fixed32KeyMapEntry
-	51,  // 60: testdata.MapWithIntKey.fixed64_key_map:type_name -> testdata.MapWithIntKey.Fixed64KeyMapEntry
-	52,  // 61: testdata.MapWithIntKey.sfixed32_key_map:type_name -> testdata.MapWithIntKey.Sfixed32KeyMapEntry
-	53,  // 62: testdata.MapWithIntKey.sfixed64_key_map:type_name -> testdata.MapWithIntKey.Sfixed64KeyMapEntry
-	54,  // 63: testdata.MapWithIntKey.redact_int32_key_map:type_name -> testdata.MapWithIntKey.RedactInt32KeyMapEntry
-	55,  // 64: testdata.MapWithIntKey.redact_int64_user_map:type_name -> testdata.MapWithIntKey.RedactInt64UserMapEntry
-	56,  // 65: testdata.MapWithBoolKey.bool_key_map:type_name -> testdata.MapWithBoolKey.BoolKeyMapEntry
-	57,  // 66: testdata.MapWithBoolKey.bool_user_map:type_name -> testdata.MapWithBoolKey.BoolUserMapEntry
-	58,  // 67: testdata.MapWithBoolKey.redact_bool_key_map:type_name -> testdata.MapWithBoolKey.RedactBoolKeyMapEntry
+	65,  // 39: testdata.RepeatedMessages.timestamps:type_name -> google.protobuf.Timestamp
+	65,  // 40: testdata.RepeatedMessages.redact_timestamps:type_name -> google.protobuf.Timestamp
+	33,  // 41: testdata.MapWithStringKey.string_map:type_name -> testdata.MapWithStringKey.StringMapEntry
+	34,  // 42: testdata.MapWithStringKey.int32_map:type_name -> testdata.MapWithStringKey.Int32MapEntry
+	35,  // 43: testdata.MapWithStringKey.int64_map:type_name -> testdata.MapWithStringKey.Int64MapEntry
+	36,  // 44: testdata.MapWithStringKey.double_map:type_name -> testdata.MapWithStringKey.DoubleMapEntry
+	37,  // 45: testdata.MapWithStringKey.bool_map:type_name -> testdata.MapWithStringKey.BoolMapEntry
+	38,  // 46: testdata.MapWithStringKey.bytes_map:type_name -> testdata.MapWithStringKey.BytesMapEntry
+	39,  // 47: testdata.MapWithStringKey.user_map:type_name -> testdata.MapWithStringKey.UserMapEntry
+	40,  // 48: testdata.MapWithStringKey.address_map:type_name -> testdata.MapWithStringKey.AddressMapEntry
+	41,  // 49: testdata.MapWithStringKey.status_map:type_name -> testdata.MapWithStringKey.StatusMapEntry
+	42,  // 50: testdata.MapWithStringKey.redact_string_map:type_name -> testdata.MapWithStringKey.RedactStringMapEntry
+	43,  // 51: testdata.MapWithStringKey.redact_int64_map:type_name -> testdata.MapWithStringKey.RedactInt64MapEntry
+	44,  // 52: testdata.MapWithStringKey.redact_user_map:type_name -> testdata.MapWithStringKey.RedactUserMapEntry
+	45,  // 53: testdata.MapWithIntKey.int32_key_map:type_name -> testdata.MapWithIntKey.Int32KeyMapEntry
+	46,  // 54: testdata.MapWithIntKey.int64_key_map:type_name -> testdata.MapWithIntKey.Int64KeyMapEntry
+	47,  // 55: testdata.MapWithIntKey.uint32_key_map:type_name -> testdata.MapWithIntKey.Uint32KeyMapEntry
+	48,  // 56: testdata.MapWithIntKey.uint64_key_map:type_name -> testdata.MapWithIntKey.Uint64KeyMapEntry
+	49,  // 57: testdata.MapWithIntKey.sint32_key_map:type_name -> testdata.MapWithIntKey.Sint32KeyMapEntry
+	50,  // 58: testdata.MapWithIntKey.sint64_key_map:type_name -> testdata.MapWithIntKey.Sint64KeyMapEntry
+	51,  // 59: testdata.MapWithIntKey.fixed32_key_map:type_name -> testdata.MapWithIntKey.Fixed32KeyMapEntry
+	52,  // 60: testdata.MapWithIntKey.fixed64_key_map:type_name -> testdata.MapWithIntKey.Fixed64KeyMapEntry
+	53,  // 61: testdata.MapWithIntKey.sfixed32_key_map:type_name -> testdata.MapWithIntKey.Sfixed32KeyMapEntry
+	54,  // 62: testdata.MapWithIntKey.sfixed64_key_map:type_name -> testdata.MapWithIntKey.Sfixed64KeyMapEntry
+	55,  // 63: testdata.MapWithIntKey.redact_int32_key_map:type_name -> testdata.MapWithIntKey.RedactInt32KeyMapEntry
+	56,  // 64: testdata.MapWithIntKey.redact_int64_user_map:type_name -> testdata.MapWithIntKey.RedactInt64UserMapEntry
+	57,  // 65: testdata.MapWithBoolKey.bool_key_map:type_name -> testdata.MapWithBoolKey.BoolKeyMapEntry
+	58,  // 66: testdata.MapWithBoolKey.bool_user_map:type_name -> testdata.MapWithBoolKey.BoolUserMapEntry
+	59,  // 67: testdata.MapWithBoolKey.redact_bool_key_map:type_name -> testdata.MapWithBoolKey.RedactBoolKeyMapEntry
 	2,   // 68: testdata.OneofWithMessage.user:type_name -> testdata.User
 	3,   // 69: testdata.OneofWithMessage.address:type_name -> testdata.Address
 	4,   // 70: testdata.OneofWithMessage.account:type_name -> testdata.Account
@@ -3845,67 +4102,70 @@ var file_testdata_example_proto_depIdxs = []int32{
 	2,   // 76: testdata.ComplexMessage.owner:type_name -> testdata.User
 	3,   // 77: testdata.ComplexMessage.location:type_name -> testdata.Address
 	2,   // 78: testdata.ComplexMessage.redact_owner:type_name -> testdata.User
-	64,  // 79: testdata.ComplexMessage.created_at:type_name -> google.protobuf.Timestamp
-	65,  // 80: testdata.ComplexMessage.timeout:type_name -> google.protobuf.Duration
-	64,  // 81: testdata.ComplexMessage.redact_time:type_name -> google.protobuf.Timestamp
+	65,  // 79: testdata.ComplexMessage.created_at:type_name -> google.protobuf.Timestamp
+	66,  // 80: testdata.ComplexMessage.timeout:type_name -> google.protobuf.Duration
+	65,  // 81: testdata.ComplexMessage.redact_time:type_name -> google.protobuf.Timestamp
 	2,   // 82: testdata.ComplexMessage.members:type_name -> testdata.User
 	2,   // 83: testdata.ComplexMessage.redact_members:type_name -> testdata.User
-	59,  // 84: testdata.ComplexMessage.labels:type_name -> testdata.ComplexMessage.LabelsEntry
-	60,  // 85: testdata.ComplexMessage.assignees:type_name -> testdata.ComplexMessage.AssigneesEntry
-	61,  // 86: testdata.ComplexMessage.redact_labels:type_name -> testdata.ComplexMessage.RedactLabelsEntry
-	62,  // 87: testdata.ComplexMessage.redact_assignees:type_name -> testdata.ComplexMessage.RedactAssigneesEntry
-	63,  // 88: testdata.ComplexMessage.indexed_data:type_name -> testdata.ComplexMessage.IndexedDataEntry
+	60,  // 84: testdata.ComplexMessage.labels:type_name -> testdata.ComplexMessage.LabelsEntry
+	61,  // 85: testdata.ComplexMessage.assignees:type_name -> testdata.ComplexMessage.AssigneesEntry
+	62,  // 86: testdata.ComplexMessage.redact_labels:type_name -> testdata.ComplexMessage.RedactLabelsEntry
+	63,  // 87: testdata.ComplexMessage.redact_assignees:type_name -> testdata.ComplexMessage.RedactAssigneesEntry
+	64,  // 88: testdata.ComplexMessage.indexed_data:type_name -> testdata.ComplexMessage.IndexedDataEntry
 	2,   // 89: testdata.ComplexMessage.reviewer:type_name -> testdata.User
 	2,   // 90: testdata.MessageWithNoRedact.user:type_name -> testdata.User
 	27,  // 91: testdata.Level3.level4:type_name -> testdata.Level4
 	28,  // 92: testdata.Level2.level3:type_name -> testdata.Level3
 	29,  // 93: testdata.Level1.level2:type_name -> testdata.Level2
-	2,   // 94: testdata.MapWithStringKey.UserMapEntry.value:type_name -> testdata.User
-	3,   // 95: testdata.MapWithStringKey.AddressMapEntry.value:type_name -> testdata.Address
-	0,   // 96: testdata.MapWithStringKey.StatusMapEntry.value:type_name -> testdata.Status
-	2,   // 97: testdata.MapWithStringKey.RedactUserMapEntry.value:type_name -> testdata.User
-	2,   // 98: testdata.MapWithIntKey.RedactInt64UserMapEntry.value:type_name -> testdata.User
-	2,   // 99: testdata.MapWithBoolKey.BoolUserMapEntry.value:type_name -> testdata.User
-	2,   // 100: testdata.ComplexMessage.AssigneesEntry.value:type_name -> testdata.User
-	2,   // 101: testdata.ComplexMessage.RedactAssigneesEntry.value:type_name -> testdata.User
-	102, // [102:102] is the sub-list for method output_type
-	102, // [102:102] is the sub-list for method input_type
-	102, // [102:102] is the sub-list for extension type_name
-	102, // [102:102] is the sub-list for extension extendee
-	0,   // [0:102] is the sub-list for field type_name
+	0,   // 94: testdata.CustomMaskTypes.secret_status:type_name -> testdata.Status
+	1,   // 95: testdata.CustomMaskTypes.secret_priority:type_name -> testdata.Priority
+	0,   // 96: testdata.CustomMaskTypes.public_status:type_name -> testdata.Status
+	2,   // 97: testdata.MapWithStringKey.UserMapEntry.value:type_name -> testdata.User
+	3,   // 98: testdata.MapWithStringKey.AddressMapEntry.value:type_name -> testdata.Address
+	0,   // 99: testdata.MapWithStringKey.StatusMapEntry.value:type_name -> testdata.Status
+	2,   // 100: testdata.MapWithStringKey.RedactUserMapEntry.value:type_name -> testdata.User
+	2,   // 101: testdata.MapWithIntKey.RedactInt64UserMapEntry.value:type_name -> testdata.User
+	2,   // 102: testdata.MapWithBoolKey.BoolUserMapEntry.value:type_name -> testdata.User
+	2,   // 103: testdata.ComplexMessage.AssigneesEntry.value:type_name -> testdata.User
+	2,   // 104: testdata.ComplexMessage.RedactAssigneesEntry.value:type_name -> testdata.User
+	105, // [105:105] is the sub-list for method output_type
+	105, // [105:105] is the sub-list for method input_type
+	105, // [105:105] is the sub-list for extension type_name
+	105, // [105:105] is the sub-list for extension extendee
+	0,   // [0:105] is the sub-list for field type_name
 }
 
-func init() { file_testdata_example_proto_init() }
-func file_testdata_example_proto_init() {
-	if File_testdata_example_proto != nil {
+func init() { file_example_proto_init() }
+func file_example_proto_init() {
+	if File_example_proto != nil {
 		return
 	}
-	file_testdata_example_proto_msgTypes[17].OneofWrappers = []any{
+	file_example_proto_msgTypes[17].OneofWrappers = []any{
 		(*OneofBasic_StringValue)(nil),
 		(*OneofBasic_IntValue)(nil),
 		(*OneofBasic_DoubleValue)(nil),
 		(*OneofBasic_BoolValue)(nil),
 	}
-	file_testdata_example_proto_msgTypes[18].OneofWrappers = []any{
+	file_example_proto_msgTypes[18].OneofWrappers = []any{
 		(*OneofWithRedact_ApiKey)(nil),
 		(*OneofWithRedact_Token)(nil),
 		(*OneofWithRedact_Secret)(nil),
 		(*OneofWithRedact_Description)(nil),
 		(*OneofWithRedact_Count)(nil),
 	}
-	file_testdata_example_proto_msgTypes[19].OneofWrappers = []any{
+	file_example_proto_msgTypes[19].OneofWrappers = []any{
 		(*OneofWithMessage_User)(nil),
 		(*OneofWithMessage_Address)(nil),
 		(*OneofWithMessage_Account)(nil),
 		(*OneofWithMessage_SecretUser)(nil),
 		(*OneofWithMessage_SecretString)(nil),
 	}
-	file_testdata_example_proto_msgTypes[20].OneofWrappers = []any{
+	file_example_proto_msgTypes[20].OneofWrappers = []any{
 		(*OneofWithEnum_Status)(nil),
 		(*OneofWithEnum_Priority)(nil),
 		(*OneofWithEnum_StatusText)(nil),
 	}
-	file_testdata_example_proto_msgTypes[21].OneofWrappers = []any{
+	file_example_proto_msgTypes[21].OneofWrappers = []any{
 		(*ComplexMessage_Note)(nil),
 		(*ComplexMessage_PriorityValue)(nil),
 		(*ComplexMessage_Reviewer)(nil),
@@ -3916,18 +4176,18 @@ func file_testdata_example_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_testdata_example_proto_rawDesc), len(file_testdata_example_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_example_proto_rawDesc), len(file_example_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   62,
+			NumMessages:   63,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_testdata_example_proto_goTypes,
-		DependencyIndexes: file_testdata_example_proto_depIdxs,
-		EnumInfos:         file_testdata_example_proto_enumTypes,
-		MessageInfos:      file_testdata_example_proto_msgTypes,
+		GoTypes:           file_example_proto_goTypes,
+		DependencyIndexes: file_example_proto_depIdxs,
+		EnumInfos:         file_example_proto_enumTypes,
+		MessageInfos:      file_example_proto_msgTypes,
 	}.Build()
-	File_testdata_example_proto = out.File
-	file_testdata_example_proto_goTypes = nil
-	file_testdata_example_proto_depIdxs = nil
+	File_example_proto = out.File
+	file_example_proto_goTypes = nil
+	file_example_proto_depIdxs = nil
 }

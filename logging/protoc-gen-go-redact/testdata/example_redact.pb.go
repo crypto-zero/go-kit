@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-redact v1.0.0
 // - protoc             v5.29.3
-// source: testdata/example.proto
+// source: example.proto
 
 package testdata
 
@@ -1274,6 +1274,50 @@ func (x *SpecialCharacters) redact() map[string]any {
 // Sensitive fields are masked to prevent accidental logging of sensitive data.
 // This method implements the Redacter interface for Kratos logging middleware.
 func (x *SpecialCharacters) Redact() string {
+	if x == nil {
+		return "{}"
+	}
+	b, _ := json.Marshal(x.redact())
+	return string(b)
+}
+
+// redact returns a map representation with sensitive fields masked.
+// This is used internally for recursive redaction without JSON escaping issues.
+func (x *CustomMaskTypes) redact() map[string]any {
+	if x == nil {
+		return nil
+	}
+	m := make(map[string]any)
+	m["password"] = "[PASSWORD]"
+	m["secretInt32"] = int64(-1)
+	m["secretInt64"] = int64(-999)
+	m["secretUint32"] = int64(9999)
+	m["secretUint64"] = int64(8888)
+	m["secretSint32"] = int64(-100)
+	m["secretSint64"] = int64(-200)
+	m["secretFixed32"] = int64(1111)
+	m["secretFixed64"] = int64(2222)
+	m["secretSfixed32"] = int64(-333)
+	m["secretSfixed64"] = int64(-444)
+	m["secretFloat"] = float64(-1.5)
+	m["secretDouble"] = float64(-999.99)
+	m["secretBool"] = true
+	m["secretBytes"] = "[BINARY]"
+	m["secretStatus"] = int32(99)
+	m["secretPriority"] = int32(1)
+	m["publicString"] = x.PublicString
+	m["publicInt64"] = x.PublicInt64
+	m["publicDouble"] = x.PublicDouble
+	m["publicBool"] = x.PublicBool
+	m["publicBytes"] = x.PublicBytes
+	m["publicStatus"] = x.PublicStatus
+	return m
+}
+
+// Redact returns a redacted JSON string representation of CustomMaskTypes.
+// Sensitive fields are masked to prevent accidental logging of sensitive data.
+// This method implements the Redacter interface for Kratos logging middleware.
+func (x *CustomMaskTypes) Redact() string {
 	if x == nil {
 		return "{}"
 	}

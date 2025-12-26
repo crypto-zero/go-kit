@@ -652,6 +652,213 @@ func TestSpecialCharacters_Redact(t *testing.T) {
 }
 
 // =============================================================================
+// Custom Mask Types Tests
+// =============================================================================
+
+func TestCustomMaskTypes_StringMask(t *testing.T) {
+	msg := &testdata.CustomMaskTypes{
+		Password:     "super-secret-password",
+		PublicString: "visible text",
+	}
+
+	result := msg.Redact()
+	t.Logf("CustomMaskTypes (String).Redact(): %s", result)
+
+	// Custom string mask
+	assertContainsString(t, result, "password", "[PASSWORD]")
+	// Public string should be preserved
+	assertContainsString(t, result, "publicString", "visible text")
+
+	// Original password should NOT appear
+	if strings.Contains(result, "super-secret-password") {
+		t.Error("Original password should be masked")
+	}
+}
+
+func TestCustomMaskTypes_IntMask(t *testing.T) {
+	msg := &testdata.CustomMaskTypes{
+		SecretInt32:    12345,
+		SecretInt64:    67890,
+		SecretUint32:   11111,
+		SecretUint64:   22222,
+		SecretSint32:   -50,
+		SecretSint64:   -60,
+		SecretFixed32:  700,
+		SecretFixed64:  800,
+		SecretSfixed32: -900,
+		SecretSfixed64: -1000,
+		PublicInt64:    42,
+	}
+
+	result := msg.Redact()
+	t.Logf("CustomMaskTypes (Int).Redact(): %s", result)
+
+	// Custom int masks
+	assertContains(t, result, "secretInt32", "-1")
+	assertContains(t, result, "secretInt64", "-999")
+	assertContains(t, result, "secretUint32", "9999")
+	assertContains(t, result, "secretUint64", "8888")
+	assertContains(t, result, "secretSint32", "-100")
+	assertContains(t, result, "secretSint64", "-200")
+	assertContains(t, result, "secretFixed32", "1111")
+	assertContains(t, result, "secretFixed64", "2222")
+	assertContains(t, result, "secretSfixed32", "-333")
+	assertContains(t, result, "secretSfixed64", "-444")
+
+	// Public int should be preserved
+	assertContains(t, result, "publicInt64", "42")
+
+	// Original values should NOT appear
+	if strings.Contains(result, "12345") {
+		t.Error("Original secretInt32 should be masked")
+	}
+	if strings.Contains(result, "67890") {
+		t.Error("Original secretInt64 should be masked")
+	}
+}
+
+func TestCustomMaskTypes_DoubleMask(t *testing.T) {
+	msg := &testdata.CustomMaskTypes{
+		SecretFloat:  3.14159,
+		SecretDouble: 2.71828,
+		PublicDouble: 99.99,
+	}
+
+	result := msg.Redact()
+	t.Logf("CustomMaskTypes (Double).Redact(): %s", result)
+
+	// Custom double masks
+	assertContains(t, result, "secretFloat", "-1.5")
+	assertContains(t, result, "secretDouble", "-999.99")
+
+	// Public double should be preserved
+	assertContains(t, result, "publicDouble", "99.99")
+
+	// Original values should NOT appear
+	if strings.Contains(result, "3.14159") {
+		t.Error("Original secretFloat should be masked")
+	}
+	if strings.Contains(result, "2.71828") {
+		t.Error("Original secretDouble should be masked")
+	}
+}
+
+func TestCustomMaskTypes_BoolMask(t *testing.T) {
+	msg := &testdata.CustomMaskTypes{
+		SecretBool: false, // Original is false, but mask is true
+		PublicBool: true,
+	}
+
+	result := msg.Redact()
+	t.Logf("CustomMaskTypes (Bool).Redact(): %s", result)
+
+	// Custom bool mask (true instead of default false)
+	assertContains(t, result, "secretBool", "true")
+
+	// Public bool should be preserved
+	assertContains(t, result, "publicBool", "true")
+}
+
+func TestCustomMaskTypes_BytesMask(t *testing.T) {
+	msg := &testdata.CustomMaskTypes{
+		SecretBytes: []byte("secret binary data"),
+		PublicBytes: []byte("public data"),
+	}
+
+	result := msg.Redact()
+	t.Logf("CustomMaskTypes (Bytes).Redact(): %s", result)
+
+	// Custom bytes mask
+	assertContainsString(t, result, "secretBytes", "[BINARY]")
+
+	// Original bytes should NOT appear (base64 encoded)
+	if strings.Contains(result, "c2VjcmV0") { // base64 of "secret"
+		t.Error("Original secretBytes should be masked")
+	}
+}
+
+func TestCustomMaskTypes_EnumMask(t *testing.T) {
+	msg := &testdata.CustomMaskTypes{
+		SecretStatus:   testdata.Status_STATUS_ACTIVE,   // Original is 1, mask is 99
+		SecretPriority: testdata.Priority_PRIORITY_HIGH, // Original is 3, mask is 1
+		PublicStatus:   testdata.Status_STATUS_PENDING,  // 3
+	}
+
+	result := msg.Redact()
+	t.Logf("CustomMaskTypes (Enum).Redact(): %s", result)
+
+	// Custom enum masks
+	assertContains(t, result, "secretStatus", "99")
+	assertContains(t, result, "secretPriority", "1")
+
+	// Public status should be preserved
+	assertContains(t, result, "publicStatus", "3")
+}
+
+func TestCustomMaskTypes_AllFields(t *testing.T) {
+	msg := &testdata.CustomMaskTypes{
+		Password:       "secret-password",
+		SecretInt32:    100,
+		SecretInt64:    200,
+		SecretUint32:   300,
+		SecretUint64:   400,
+		SecretSint32:   -500,
+		SecretSint64:   -600,
+		SecretFixed32:  700,
+		SecretFixed64:  800,
+		SecretSfixed32: -900,
+		SecretSfixed64: -1000,
+		SecretFloat:    1.1,
+		SecretDouble:   2.2,
+		SecretBool:     false,
+		SecretBytes:    []byte("secret"),
+		SecretStatus:   testdata.Status_STATUS_ACTIVE,
+		SecretPriority: testdata.Priority_PRIORITY_CRITICAL,
+		PublicString:   "public",
+		PublicInt64:    999,
+		PublicDouble:   88.88,
+		PublicBool:     true,
+		PublicBytes:    []byte("public"),
+		PublicStatus:   testdata.Status_STATUS_INACTIVE,
+	}
+
+	result := msg.Redact()
+	t.Logf("CustomMaskTypes (All).Redact(): %s", result)
+
+	// Verify all custom masks are applied correctly
+	assertContainsString(t, result, "password", "[PASSWORD]")
+	assertContains(t, result, "secretInt32", "-1")
+	assertContains(t, result, "secretInt64", "-999")
+	assertContains(t, result, "secretUint32", "9999")
+	assertContains(t, result, "secretUint64", "8888")
+	assertContains(t, result, "secretSint32", "-100")
+	assertContains(t, result, "secretSint64", "-200")
+	assertContains(t, result, "secretFixed32", "1111")
+	assertContains(t, result, "secretFixed64", "2222")
+	assertContains(t, result, "secretSfixed32", "-333")
+	assertContains(t, result, "secretSfixed64", "-444")
+	assertContains(t, result, "secretFloat", "-1.5")
+	assertContains(t, result, "secretDouble", "-999.99")
+	assertContains(t, result, "secretBool", "true")
+	assertContainsString(t, result, "secretBytes", "[BINARY]")
+	assertContains(t, result, "secretStatus", "99")
+	assertContains(t, result, "secretPriority", "1")
+
+	// Verify public fields are preserved
+	assertContainsString(t, result, "publicString", "public")
+	assertContains(t, result, "publicInt64", "999")
+	assertContains(t, result, "publicDouble", "88.88")
+	assertContains(t, result, "publicBool", "true")
+	assertContains(t, result, "publicStatus", "2")
+
+	// Verify it's valid JSON
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+		t.Errorf("Result should be valid JSON: %v", err)
+	}
+}
+
+// =============================================================================
 // JSON Validity Tests
 // =============================================================================
 
@@ -666,6 +873,7 @@ func TestAllMessages_ValidJSON(t *testing.T) {
 		&testdata.MapWithStringKey{StringMap: map[string]string{"k": "v"}},
 		&testdata.OneofWithRedact{Id: "1", Credential: &testdata.OneofWithRedact_ApiKey{ApiKey: "key"}},
 		&testdata.ComplexMessage{Id: "1", Secret: "secret"},
+		&testdata.CustomMaskTypes{Password: "pass", SecretInt32: 100, SecretDouble: 3.14},
 	}
 
 	for i, msg := range messages {

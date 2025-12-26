@@ -465,3 +465,47 @@ message SpecialCharacters {
   string unicode = 5 [(kit.redact.v1.redact) = {redact: true, string_mask: "Hello World"}];
   string emoji = 6 [(kit.redact.v1.redact) = {redact: true, string_mask: "[LOCKED]"}];
 }
+
+// ============================================================================
+// Custom Mask Tests for All Supported Types
+// ============================================================================
+
+// CustomMaskTypes - Tests custom mask values for all supported scalar types
+message CustomMaskTypes {
+  // String with custom mask
+  string password = 1 [(kit.redact.v1.redact) = {redact: true, string_mask: "[PASSWORD]"}];
+  
+  // Integer types with custom mask (-1 indicates redacted)
+  int32 secret_int32 = 2 [(kit.redact.v1.redact) = {redact: true, int_mask: -1}];
+  int64 secret_int64 = 3 [(kit.redact.v1.redact) = {redact: true, int_mask: -999}];
+  uint32 secret_uint32 = 4 [(kit.redact.v1.redact) = {redact: true, int_mask: 9999}];
+  uint64 secret_uint64 = 5 [(kit.redact.v1.redact) = {redact: true, int_mask: 8888}];
+  sint32 secret_sint32 = 6 [(kit.redact.v1.redact) = {redact: true, int_mask: -100}];
+  sint64 secret_sint64 = 7 [(kit.redact.v1.redact) = {redact: true, int_mask: -200}];
+  fixed32 secret_fixed32 = 8 [(kit.redact.v1.redact) = {redact: true, int_mask: 1111}];
+  fixed64 secret_fixed64 = 9 [(kit.redact.v1.redact) = {redact: true, int_mask: 2222}];
+  sfixed32 secret_sfixed32 = 10 [(kit.redact.v1.redact) = {redact: true, int_mask: -333}];
+  sfixed64 secret_sfixed64 = 11 [(kit.redact.v1.redact) = {redact: true, int_mask: -444}];
+  
+  // Float/Double types with custom mask
+  float secret_float = 12 [(kit.redact.v1.redact) = {redact: true, double_mask: -1.5}];
+  double secret_double = 13 [(kit.redact.v1.redact) = {redact: true, double_mask: -999.99}];
+  
+  // Bool with custom mask (mask to true instead of default false)
+  bool secret_bool = 14 [(kit.redact.v1.redact) = {redact: true, bool_mask: true}];
+  
+  // Bytes with custom mask
+  bytes secret_bytes = 15 [(kit.redact.v1.redact) = {redact: true, bytes_mask: "[BINARY]"}];
+  
+  // Enum with custom mask (mask to specific enum value)
+  Status secret_status = 16 [(kit.redact.v1.redact) = {redact: true, enum_mask: 99}];
+  Priority secret_priority = 17 [(kit.redact.v1.redact) = {redact: true, enum_mask: 1}];
+  
+  // Non-redacted fields for comparison
+  string public_string = 20;
+  int64 public_int64 = 21;
+  double public_double = 22;
+  bool public_bool = 23;
+  bytes public_bytes = 24;
+  Status public_status = 25;
+}
