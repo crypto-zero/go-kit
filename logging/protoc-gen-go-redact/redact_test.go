@@ -177,7 +177,7 @@ func TestMessageDescExecute(t *testing.T) {
 				Name: "AllTypes",
 				Fields: []*fieldDesc{
 					{GoName: "StrField", JSONName: "strField", Redact: true, StringMask: "[HIDDEN]"},
-					{GoName: "IntField", JSONName: "intField", Redact: true, IsNumeric: true, IntMask: 0},
+					{GoName: "IntField", JSONName: "intField", Redact: true, IsInteger: true, IntMask: 0},
 					{GoName: "FloatField", JSONName: "floatField", Redact: true, IsFloat: true, DoubleMask: 0},
 					{GoName: "BoolField", JSONName: "boolField", Redact: true, IsBool: true, BoolMask: false},
 					{GoName: "BytesField", JSONName: "bytesField", Redact: true, IsBytes: true, BytesMask: ""},

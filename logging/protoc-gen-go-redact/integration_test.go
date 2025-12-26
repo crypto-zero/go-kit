@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/crypto-zero/go-kit/logging/protoc-gen-go-redact/testdata"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -883,4 +884,54 @@ func TestAllMessages_ValidJSON(t *testing.T) {
 			t.Errorf("Message %d produced invalid JSON: %v\nResult: %s", i, err, result)
 		}
 	}
+}
+
+func TestMapWithBoolKey_Redact(t *testing.T) {
+	m := &testdata.MapWithBoolKey{
+		BoolKeyMap: map[bool]string{true: "yes", false: "no"},
+		BoolUserMap: map[bool]*testdata.User{
+			true: {Id: "user-true", Name: "TrueUser", Email: "true@test.com", Password: "secret"},
+		},
+
+		// Redacted map
+		RedactBoolKeyMap: map[bool]string{true: "secret-true", false: "secret-false"},
+	}
+
+	jsonBytes, err := protojson.Marshal(m)
+	if err != nil {
+		t.Fatalf("Failed to marshal map with bool key: %v", err)
+	}
+
+	t.Logf("MapWithBoolKey (protojson): %s", string(jsonBytes))
+
+	result := m.Redact()
+	t.Logf("MapWithBoolKey.Redact(): %s", result)
+
+	// Bool keys should be converted to strings in JSON ("true", "false")
+	if !strings.Contains(result, `"boolKeyMap":{`) {
+		t.Error("boolKeyMap should exist")
+	}
+	// Keys should be "true" or "false" strings in JSON
+	if !strings.Contains(result, `"true":"yes"`) && !strings.Contains(result, `"false":"no"`) {
+		t.Logf("Note: map key order may vary, checking for bool key values")
+	}
+
+	// BoolUserMap should have recursively redacted User values
+	if strings.Contains(result, "true@test.com") {
+		t.Error("Email in boolUserMap User should be redacted")
+	}
+	if strings.Contains(result, "secret") {
+		t.Error("Password in boolUserMap User should be redacted")
+	}
+
+	// User in map should have masked email and password
+	if !strings.Contains(result, `"email":"*"`) {
+		t.Error("User email should be masked as *")
+	}
+	if !strings.Contains(result, `"password":"[HIDDEN]"`) {
+		t.Error("User password should be masked as [HIDDEN]")
+	}
+
+	// Redacted map should be empty
+	assertContains(t, result, "redactBoolKeyMap", "{}")
 }

@@ -42,7 +42,7 @@ type fieldDesc struct {
 	Redact            bool   // Whether this field should be redacted
 	IsMessage         bool   // Whether this field is a proto message type
 	IsRepeated        bool   // Whether this field is a repeated field
-	IsNumeric         bool   // Whether this field is a numeric type (int, etc.)
+	IsInteger         bool   // Whether this field is an integer type (int32, int64, uint32, etc.)
 	IsFloat           bool   // Whether this field is a float/double type
 	IsBool            bool   // Whether this field is a bool type
 	IsBytes           bool   // Whether this field is a bytes type

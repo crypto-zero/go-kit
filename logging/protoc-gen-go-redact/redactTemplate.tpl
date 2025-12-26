@@ -24,7 +24,7 @@ func (x *{{.Name}}) redact() map[string]any {
 	if x.Get{{.GoName}}() != nil {
 		m["{{.JSONName}}"] = {{.BytesMask | quote}}
 	}
-{{- else if .IsNumeric}}
+{{- else if .IsInteger}}
 	if x.Get{{.GoName}}() != 0 {
 		m["{{.JSONName}}"] = int64({{.IntMask}})
 	}
@@ -45,7 +45,7 @@ func (x *{{.Name}}) redact() map[string]any {
 		m["{{.JSONName}}"] = {{.StringMask | quote}}
 	}
 {{- end}}
-{{- else if .IsNumeric}}
+{{- else if .IsInteger}}
 	m["{{.JSONName}}"] = int64({{.IntMask}})
 {{- else if .IsFloat}}
 	m["{{.JSONName}}"] = float64({{.DoubleMask}})

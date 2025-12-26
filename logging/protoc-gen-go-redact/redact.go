@@ -280,7 +280,7 @@ func buildMessageDesc(msg *protogen.Message) *messageDesc {
 			JSONName:   string(field.Desc.JSONName()),                         // JSON/proto field name (camelCase)
 			IsMessage:  kind == protoreflect.MessageKind && !isMap,            // Nested message (not map)
 			IsRepeated: field.Desc.IsList() && !isMap,                         // Repeated field (not map)
-			IsNumeric:  integerKinds[kind],                                    // Any integer type
+			IsInteger:  integerKinds[kind],                                    // Any integer type
 			IsFloat:    floatKinds[kind],                                      // float or double
 			IsBool:     kind == protoreflect.BoolKind,                         // bool
 			IsBytes:    kind == protoreflect.BytesKind,                        // bytes
