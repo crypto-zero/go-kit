@@ -31,13 +31,21 @@ type Redacter interface {
 type Option func(*options)
 
 type options struct {
-	skipRedact bool
+	skipRedact   bool
+	deviceHeader string
 }
 
 // WithSkipRedact ignores the Redacter interface.
 func WithSkipRedact() Option {
 	return func(o *options) {
 		o.skipRedact = true
+	}
+}
+
+// WithDeviceHeader sets a custom header key for extracting device info.
+func WithDeviceHeader(header string) Option {
+	return func(o *options) {
+		o.deviceHeader = header
 	}
 }
 
@@ -73,7 +81,7 @@ func Server(logger *slog.Logger, opts ...Option) middleware.Middleware {
 			logger.Log(ctx, level,
 				"server",
 				"ip", GetClientIP(ctx),
-				"device", GetClientDevice(ctx),
+				"device", getClientDevice(ctx, options.deviceHeader),
 				"kind", "server",
 				"component", kind,
 				"operation", operation,
@@ -121,7 +129,7 @@ func Client(logger *slog.Logger, opts ...Option) middleware.Middleware {
 			logger.Log(ctx, level,
 				"client",
 				"ip", GetClientIP(ctx),
-				"device", GetClientDevice(ctx),
+				"device", getClientDevice(ctx, options.deviceHeader),
 				"kind", "client",
 				"component", kind,
 				"operation", operation,
@@ -279,9 +287,9 @@ func normalizeIP(ip string) string {
 	return parsed.String()
 }
 
-// GetClientDevice extracts the client device info (User-Agent) from the request context.
+// getClientDevice extracts the client device info (User-Agent or custom header) from the request context.
 // Supports both HTTP and gRPC transports.
-func GetClientDevice(ctx context.Context) string {
+func getClientDevice(ctx context.Context, deviceHeader string) string {
 	tr, ok := transport.FromServerContext(ctx)
 	if !ok {
 		return ""
@@ -289,12 +297,27 @@ func GetClientDevice(ctx context.Context) string {
 
 	// Handle HTTP transport
 	if httpTr, ok := tr.(*kratoshttp.Transport); ok {
-		return httpTr.Request().UserAgent()
+		req := httpTr.Request()
+		if req == nil {
+			return ""
+		}
+		if deviceHeader != "" {
+			if val := req.Header.Get(deviceHeader); val != "" {
+				return val
+			}
+		}
+		return req.UserAgent()
 	}
-
 	// Handle gRPC transport
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
-		// gRPC usually passes user-agent in metadata
+		// 1. Try custom header first
+		if deviceHeader != "" {
+			// gRPC metadata keys are always lowercase
+			if val := md.Get(strings.ToLower(deviceHeader)); len(val) > 0 {
+				return val[0]
+			}
+		}
+		// 2. Fallback to standard user-agent
 		if ua := md.Get("user-agent"); len(ua) > 0 {
 			return ua[0]
 		}
@@ -302,6 +325,5 @@ func GetClientDevice(ctx context.Context) string {
 			return ua[0]
 		}
 	}
-
 	return ""
 }
