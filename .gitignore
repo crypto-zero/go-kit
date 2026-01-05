@@ -35,3 +35,6 @@ bin/
 
 # protoc-gen-go-redact binary
 logging/protoc-gen-go-redact/protoc-gen-go-redact
+
+# cursor
+.cursor
