@@ -4,14 +4,14 @@ set -e
 cd "$(dirname "$0")"
 
 echo "1. Building plugin..."
-(cd .. && go build -o protoc-gen-go-redact .)
-if [ ! -f "../protoc-gen-go-redact" ]; then
+(cd ../../.. && go build -o protoc-gen-go-redact .)
+if [ ! -f "../../../protoc-gen-go-redact" ]; then
     echo "ERROR: Plugin build failed!"
     exit 1
 fi
 
 echo "2. Generating base Go code (example.pb.go)..."
-protoc --proto_path=../../../proto --proto_path=. --go_out=. --go_opt=paths=source_relative example.proto
+protoc --proto_path=../../../../../proto --proto_path=. --go_out=. --go_opt=paths=source_relative example.proto
 
 echo "   Verifying example.pb.go..."
 if [ ! -f "example.pb.go" ]; then
@@ -23,7 +23,7 @@ fi
 echo "   ✓ example.pb.go generated successfully"
 
 echo "3. Generating redact code (example_redact.pb.go)..."
-protoc --proto_path=../../../proto --proto_path=. --plugin=protoc-gen-go-redact=../protoc-gen-go-redact --go-redact_out=. --go-redact_opt=paths=source_relative example.proto 2>&1 | tee protoc_output.log
+protoc --proto_path=../../../../../proto --proto_path=. --plugin=protoc-gen-go-redact=../../../protoc-gen-go-redact --go-redact_out=. --go-redact_opt=paths=source_relative example.proto 2>&1 | tee protoc_output.log
 
 echo "   Verifying example_redact.pb.go..."
 if [ ! -f "example_redact.pb.go" ]; then

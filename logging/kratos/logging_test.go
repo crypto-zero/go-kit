@@ -74,7 +74,7 @@ func (m *mockHeader) Values(key string) []string   { return nil }
 
 func TestExtractArgs_Redacter(t *testing.T) {
 	req := &mockRedacter{Value: "test", Password: "secret123"}
-	result := extractArgs(req)
+	result := extractArgs(req, false)
 
 	raw, ok := result.(json.RawMessage)
 	if !ok {
@@ -93,9 +93,29 @@ func TestExtractArgs_Redacter(t *testing.T) {
 	}
 }
 
+func TestExtractArgs_Redacter_SkipRedact(t *testing.T) {
+	req := &mockRedacter{Value: "test", Password: "secret123"}
+	// When skipRedact is true, it shouldn't use Redact(), but fall through to fmt.Sprintf or other logic.
+	// Since mockRedacter is a struct pointer, it likely falls to fmt.Sprintf("%+v", args) if not implementing other interfaces.
+	// Let's verify what mockRedacter does when not cast to Redacter.
+	// It doesn't implement fmt.Stringer or proto.Message. So it should hit default case: fmt.Sprintf("%+v", args)
+
+	result := extractArgs(req, true)
+
+	str, ok := result.(string)
+	if !ok {
+		t.Fatalf("Expected string for skipped redact, got %T", result)
+	}
+
+	// %+v on struct pointer often prints &{Field:Value ...}
+	if !strings.Contains(str, "secret123") {
+		t.Errorf("Expected original password to be visible when skipping redact, got: %s", str)
+	}
+}
+
 func TestExtractArgs_ProtoMessage(t *testing.T) {
 	msg := wrapperspb.String("hello world")
-	result := extractArgs(msg)
+	result := extractArgs(msg, false)
 
 	raw, ok := result.(json.RawMessage)
 	if !ok {
@@ -110,7 +130,7 @@ func TestExtractArgs_ProtoMessage(t *testing.T) {
 
 func TestExtractArgs_Stringer(t *testing.T) {
 	s := &mockStringer{Value: "hello"}
-	result := extractArgs(s)
+	result := extractArgs(s, false)
 
 	str, ok := result.(string)
 	if !ok {
@@ -124,7 +144,7 @@ func TestExtractArgs_Stringer(t *testing.T) {
 
 func TestExtractArgs_PlainStruct(t *testing.T) {
 	plain := &plainStruct{Name: "John", Age: 30}
-	result := extractArgs(plain)
+	result := extractArgs(plain, false)
 
 	str, ok := result.(string)
 	if !ok {
@@ -137,7 +157,7 @@ func TestExtractArgs_PlainStruct(t *testing.T) {
 }
 
 func TestExtractArgs_Nil(t *testing.T) {
-	result := extractArgs(nil)
+	result := extractArgs(nil, false)
 	str, ok := result.(string)
 	if !ok {
 		t.Fatalf("Expected string for nil, got %T", result)
@@ -464,5 +484,77 @@ func TestClient_LogsLatency(t *testing.T) {
 	logOutput := buf.String()
 	if !strings.Contains(logOutput, "latency") {
 		t.Errorf("Expected 'latency' in log, got: %s", logOutput)
+	}
+}
+
+func TestServer_WithSkipRedact(t *testing.T) {
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	// Use WithSkipRedact option
+	mw := Server(logger, WithSkipRedact())
+
+	handler := func(ctx context.Context, req any) (any, error) {
+		return &mockRedacter{Value: "response", Password: "secret"}, nil
+	}
+
+	wrapped := mw(handler)
+
+	ctx := transport.NewServerContext(context.Background(), &mockTransporter{
+		kind:      transport.KindHTTP,
+		operation: "/api/v1/test",
+	})
+
+	req := &mockRedacter{Value: "request", Password: "password123"}
+	_, err := wrapped(ctx, req)
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	logOutput := buf.String()
+
+	// When skipping redact, we don't use Redact() method, so json structure might be different or just default struct print.
+	// But definitively check for presence of sensitive data.
+	if !strings.Contains(logOutput, "password123") {
+		t.Errorf("Request password should be visible in log when skipping redact, got: %s", logOutput)
+	}
+	if !strings.Contains(logOutput, "secret") {
+		t.Errorf("Reply password should be visible in log when skipping redact, got: %s", logOutput)
+	}
+}
+
+func TestClient_WithSkipRedact(t *testing.T) {
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	// Use WithSkipRedact option
+	mw := Client(logger, WithSkipRedact())
+
+	handler := func(ctx context.Context, req any) (any, error) {
+		return &mockRedacter{Value: "response", Password: "secret"}, nil
+	}
+
+	wrapped := mw(handler)
+
+	ctx := transport.NewClientContext(context.Background(), &mockTransporter{
+		kind:      transport.KindHTTP,
+		operation: "/api/external/call",
+	})
+
+	req := &mockRedacter{Value: "request", Password: "password123"}
+	_, err := wrapped(ctx, req)
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	logOutput := buf.String()
+
+	if !strings.Contains(logOutput, "password123") {
+		t.Errorf("Request password should be visible in log when skipping redact, got: %s", logOutput)
+	}
+	if !strings.Contains(logOutput, "secret") {
+		t.Errorf("Reply password should be visible in log when skipping redact, got: %s", logOutput)
 	}
 }

@@ -108,11 +108,9 @@ func (h *WrapHandler) resolveAttrs(ctx context.Context, attrs []slog.Attr) (
 			value := attrValue.F(ctx)
 			attr = slog.Any(attr.Key, value)
 		case json.RawMessage:
-			// Unmarshal json.RawMessage to any so zap can serialize it correctly
-			// This avoids double escaping when logging JSON strings
-			var value any
-			if err := json.Unmarshal(attrValue, &value); err == nil {
-				attr = slog.Any(attr.Key, value)
+			// Pass json.RawMessage directly to zap
+			if len(attrValue) > 0 {
+				attr = slog.Any(attr.Key, attrValue)
 			}
 		}
 		out = append(out, attr)

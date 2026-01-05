@@ -27,8 +27,26 @@ type Redacter interface {
 	Redact() string
 }
 
+// Option is logging option.
+type Option func(*options)
+
+type options struct {
+	skipRedact bool
+}
+
+// WithSkipRedact ignores the Redacter interface.
+func WithSkipRedact() Option {
+	return func(o *options) {
+		o.skipRedact = true
+	}
+}
+
 // Server is an server logging middleware.
-func Server(logger *slog.Logger) middleware.Middleware {
+func Server(logger *slog.Logger, opts ...Option) middleware.Middleware {
+	options := &options{}
+	for _, o := range opts {
+		o(options)
+	}
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req any) (reply any, err error) {
 			var (
@@ -59,8 +77,8 @@ func Server(logger *slog.Logger) middleware.Middleware {
 				"kind", "server",
 				"component", kind,
 				"operation", operation,
-				"args", extractArgs(req),
-				"reply", extractArgs(reply),
+				"args", extractArgs(req, options.skipRedact),
+				"reply", extractArgs(reply, options.skipRedact),
 				"code", code,
 				"reason", reason,
 				"stack", stack,
@@ -72,7 +90,11 @@ func Server(logger *slog.Logger) middleware.Middleware {
 }
 
 // Client is a client logging middleware.
-func Client(logger *slog.Logger) middleware.Middleware {
+func Client(logger *slog.Logger, opts ...Option) middleware.Middleware {
+	options := &options{}
+	for _, o := range opts {
+		o(options)
+	}
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req any) (reply any, err error) {
 			var (
@@ -103,8 +125,8 @@ func Client(logger *slog.Logger) middleware.Middleware {
 				"kind", "client",
 				"component", kind,
 				"operation", operation,
-				"args", extractArgs(req),
-				"reply", extractArgs(reply),
+				"args", extractArgs(req, options.skipRedact),
+				"reply", extractArgs(reply, options.skipRedact),
 				"code", code,
 				"reason", reason,
 				"stack", stack,
@@ -118,10 +140,12 @@ func Client(logger *slog.Logger) middleware.Middleware {
 // extractArgs returns the args for logging.
 // If req implements Redacter, returns json.RawMessage to avoid double JSON escaping.
 // If req is a proto.Message, uses protojson to serialize it.
-func extractArgs(args any) any {
-	if redacter, ok := args.(Redacter); ok {
-		// Return json.RawMessage so the logger won't escape the JSON string again
-		return json.RawMessage(redacter.Redact())
+func extractArgs(args any, skipRedact bool) any {
+	if !skipRedact {
+		if redacter, ok := args.(Redacter); ok {
+			// Return json.RawMessage so the logger won't escape the JSON string again
+			return json.RawMessage(redacter.Redact())
+		}
 	}
 	if pm, ok := args.(proto.Message); ok {
 		// Use protojson for proto messages without Redacter

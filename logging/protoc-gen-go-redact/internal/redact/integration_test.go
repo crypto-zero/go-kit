@@ -1,4 +1,4 @@
-package main
+package redact
 
 import (
 	"encoding/json"
@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/crypto-zero/go-kit/logging/protoc-gen-go-redact/testdata"
+	"github.com/crypto-zero/go-kit/logging/protoc-gen-go-redact/internal/redact/testdata"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"

@@ -1,10 +1,10 @@
-package main
+package redact
 
 import (
 	"testing"
 	"time"
 
-	"github.com/crypto-zero/go-kit/logging/protoc-gen-go-redact/testdata"
+	"github.com/crypto-zero/go-kit/logging/protoc-gen-go-redact/internal/redact/testdata"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -207,51 +207,5 @@ func BenchmarkRedact_NilMessage(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = user.Redact()
-	}
-}
-
-// =============================================================================
-// Benchmark Template Execution
-// =============================================================================
-
-func BenchmarkTemplateExecute_Simple(b *testing.B) {
-	msg := &messageDesc{
-		Name: "User",
-		Fields: []*fieldDesc{
-			{GoName: "Name", JSONName: "name", Redact: false},
-			{GoName: "Email", JSONName: "email", Redact: true, StringMask: "*"},
-			{GoName: "Password", JSONName: "password", Redact: true, StringMask: "[HIDDEN]"},
-		},
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = msg.execute()
-	}
-}
-
-func BenchmarkTemplateExecute_Complex(b *testing.B) {
-	msg := &messageDesc{
-		Name: "ComplexMessage",
-		Fields: []*fieldDesc{
-			{GoName: "Id", JSONName: "id", Redact: false},
-			{GoName: "Name", JSONName: "name", Redact: false},
-			{GoName: "Secret", JSONName: "secret", Redact: true, StringMask: "*"},
-			{GoName: "Count", JSONName: "count", IsInteger: true, Redact: false},
-			{GoName: "RedactCount", JSONName: "redactCount", IsInteger: true, Redact: true},
-			{GoName: "Status", JSONName: "status", IsEnum: true, Redact: false},
-			{GoName: "Owner", JSONName: "owner", IsMessage: true, Redact: false},
-			{GoName: "RedactOwner", JSONName: "redactOwner", IsMessage: true, Redact: true},
-			{GoName: "Tags", JSONName: "tags", IsRepeated: true, Redact: false},
-			{GoName: "RedactTags", JSONName: "redactTags", IsRepeated: true, Redact: true},
-			{GoName: "Labels", JSONName: "labels", IsMap: true, Redact: false},
-			{GoName: "RedactLabels", JSONName: "redactLabels", IsMap: true, Redact: true},
-			{GoName: "Extra", JSONName: "extra", IsOneof: true, IsMessage: true},
-		},
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = msg.execute()
 	}
 }
