@@ -81,7 +81,7 @@ func Server(logger *slog.Logger, opts ...Option) middleware.Middleware {
 			logger.Log(ctx, level,
 				"server",
 				"ip", GetClientIP(ctx),
-				"device", getClientDevice(ctx, options.deviceHeader),
+				"device", extractJSONOrString(getClientDevice(ctx, options.deviceHeader)),
 				"kind", "server",
 				"component", kind,
 				"operation", operation,
@@ -129,7 +129,7 @@ func Client(logger *slog.Logger, opts ...Option) middleware.Middleware {
 			logger.Log(ctx, level,
 				"client",
 				"ip", GetClientIP(ctx),
-				"device", getClientDevice(ctx, options.deviceHeader),
+				"device", extractJSONOrString(getClientDevice(ctx, options.deviceHeader)),
 				"kind", "client",
 				"component", kind,
 				"operation", operation,
@@ -143,6 +143,25 @@ func Client(logger *slog.Logger, opts ...Option) middleware.Middleware {
 			return
 		}
 	}
+}
+
+// extractJSONOrString returns json.RawMessage if the string is a valid JSON,
+// otherwise returns the original string.
+func extractJSONOrString(s string) any {
+	if s == "" {
+		return ""
+	}
+	trimmed := strings.TrimSpace(s)
+	// Fast check for likely JSON object or array
+	if len(trimmed) > 1 &&
+		((trimmed[0] == '{' && trimmed[len(trimmed)-1] == '}') ||
+			(trimmed[0] == '[' && trimmed[len(trimmed)-1] == ']')) {
+		// Verify if it is actually valid JSON
+		if json.Valid([]byte(trimmed)) {
+			return json.RawMessage(trimmed)
+		}
+	}
+	return s
 }
 
 // extractArgs returns the args for logging.
