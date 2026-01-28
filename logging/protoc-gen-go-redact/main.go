@@ -21,12 +21,18 @@ func main() {
 		ParamFunc: flag.CommandLine.Set,
 	}.Run(func(gen *protogen.Plugin) error {
 		gen.SupportedFeatures = uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL)
+
+		// Phase 1: Global analysis - collect all messages needing redaction across ALL files
+		// This enables cross-file propagation of redact requirements
+		needsRedact := redact.CollectGlobalRedactRequirements(gen.Files)
+
+		// Phase 2: Generate code for each file using the global analysis result
 		for _, f := range gen.Files {
 			if !f.Generate {
 				continue
 			}
-			// generateFile returns nil if no messages need redaction - this is normal
-			redact.GenerateFile(gen, f)
+			// GenerateFileWithGlobal uses pre-computed global needsRedact map
+			redact.GenerateFileWithGlobal(gen, f, needsRedact)
 		}
 		return nil
 	})

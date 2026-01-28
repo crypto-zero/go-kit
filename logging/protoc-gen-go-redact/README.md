@@ -7,6 +7,7 @@ A protoc plugin that generates `Redact()` methods for Protocol Buffer messages t
 - Generates `Redact()` method for messages containing sensitive fields
 - **Type-aware masking** - different types get appropriate mask values
 - **Recursive redaction** - nested messages are automatically redacted
+- **Cross-file propagation** - messages referencing sensitive types from other files automatically get `Redact()` methods
 - **Full proto3 type support** - all scalar types, enums, messages, repeated, map, oneof
 - **Well-known types support** - `Timestamp`, `Duration` etc. are properly formatted
 - **Kratos compatible** - implements the `Redacter` interface for Kratos logging middleware
@@ -184,6 +185,51 @@ event := &Event{
 
 fmt.Println(event.Redact())
 // Output: {"apiKey":"*","createdAt":"2024-12-25T16:00:00Z","name":"UserLogin"}
+```
+
+### Cross-File Propagation
+
+When a message references another message that contains sensitive fields (defined in a different `.proto` file), the plugin automatically generates `Redact()` methods for both messages.
+
+**Example:**
+
+```protobuf
+// sensitive.proto
+message SensitiveData {
+  string id = 1;
+  string password = 2 [(kit.redact.v1.redact) = {redact: true}];
+}
+
+// container.proto
+import "sensitive.proto";
+
+message Container {
+  string container_id = 1;
+  SensitiveData data = 2;  // Cross-file reference
+}
+```
+
+Both `SensitiveData` and `Container` will have `Redact()` methods generated:
+
+```go
+container := &Container{
+    ContainerId: "c-123",
+    Data: &SensitiveData{
+        Id:       "data-1",
+        Password: "super-secret",
+    },
+}
+
+fmt.Println(container.Redact())
+// Output: {"containerId":"c-123","data":{"id":"data-1","password":"*"}}
+```
+
+**Important:** For cross-file propagation to work, all related `.proto` files must be passed to `protoc` together:
+
+```bash
+protoc \
+  --go-redact_out=. --go-redact_opt=paths=source_relative \
+  sensitive.proto container.proto  # Both files in same invocation
 ```
 
 ### Map Type Support

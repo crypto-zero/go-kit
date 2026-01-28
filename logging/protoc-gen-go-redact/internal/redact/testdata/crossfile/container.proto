@@ -1,0 +1,31 @@
+// container.proto - Contains messages that reference sensitive.proto messages
+// This file tests cross-file propagation of redact requirements
+syntax = "proto3";
+
+package testdata.crossfile;
+option go_package = "github.com/crypto-zero/go-kit/logging/protoc-gen-go-redact/internal/redact/testdata/crossfile";
+
+import "crossfile/sensitive.proto";
+
+// Container references SensitiveData from another file
+// It should get a Redact() method via cross-file propagation
+message Container {
+    string container_id = 1;
+    SensitiveData sensitive = 2;  // Cross-file reference to message with redacted fields
+}
+
+// ListContainer contains repeated cross-file references
+message ListContainer {
+    repeated SensitiveData items = 1;
+}
+
+// DeepContainer has a nested reference through NestedSensitive
+message DeepContainer {
+    string id = 1;
+    NestedSensitive nested = 2;  // NestedSensitive contains SensitiveData
+}
+
+// MapContainer has a map with cross-file message values
+message MapContainer {
+    map<string, SensitiveData> data_map = 1;
+}

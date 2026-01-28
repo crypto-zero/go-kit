@@ -1,0 +1,20 @@
+// sensitive.proto - Contains messages with directly marked redact fields
+syntax = "proto3";
+
+package testdata.crossfile;
+option go_package = "github.com/crypto-zero/go-kit/logging/protoc-gen-go-redact/internal/redact/testdata/crossfile";
+
+import "kit/redact/v1/redact.proto";
+
+// SensitiveData contains directly marked redact fields
+message SensitiveData {
+    string id = 1;
+    string password = 2 [(kit.redact.v1.redact) = {redact: true, string_mask: "[PASSWORD]"}];
+    string phone = 3 [(kit.redact.v1.redact) = {redact: true, string_mask: "[PHONE]"}];
+}
+
+// NestedSensitive contains a nested message with sensitive data
+message NestedSensitive {
+    string name = 1;
+    SensitiveData data = 2;
+}
