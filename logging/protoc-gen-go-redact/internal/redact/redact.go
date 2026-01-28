@@ -56,36 +56,98 @@ var floatKinds = map[protoreflect.Kind]bool{
 	protoreflect.DoubleKind: true, // double (64-bit)
 }
 
-// GenerateFile generates a _redact.pb.go file containing Redact() method implementations.
+// CollectGlobalRedactRequirements performs a two-pass scan across ALL files to determine
+// which messages need Redact() methods. This enables cross-file propagation of redaction
+// requirements.
 //
-// The generation process follows three phases:
-//  1. Direct collection: Find messages with fields explicitly marked for redaction
-//  2. Propagation: Mark parent messages that contain redactable child messages
-//  3. Code generation: Build descriptors and generate Go code
+// Pass 1: Collect all messages with directly marked redact fields across all files
+// Pass 2: Build a global dependency graph and propagate redact requirements via BFS
 //
-// Returns nil if no messages require redaction (no file will be generated).
-func GenerateFile(gen *protogen.Plugin, file *protogen.File) *protogen.GeneratedFile {
-	// Skip files with no messages
+// The returned map contains fully-qualified message names that need redaction.
+func CollectGlobalRedactRequirements(files []*protogen.File) map[string]bool {
+	needsRedact := make(map[string]bool)
+
+	// Pass 1: Collect all messages with direct redact fields from ALL files
+	for _, file := range files {
+		collectMessagesWithDirectRedact(file.Messages, needsRedact)
+	}
+
+	// Pass 2: Build global dependency graph and propagate
+	// We need to build the parent graph across ALL files, not just one
+	propagateRedactRequirementGlobal(files, needsRedact)
+
+	return needsRedact
+}
+
+// propagateRedactRequirementGlobal propagates redact requirements across ALL files.
+// This is the key function that enables cross-file propagation.
+//
+// Example: If user.proto has Order which contains TaxiOrder from taxi.proto,
+// and TaxiOrder has redacted fields, then Order will be marked as needing redaction.
+func propagateRedactRequirementGlobal(files []*protogen.File, needsRedact map[string]bool) {
+	// Build reverse dependency graph across ALL files: Child -> [Parent1, Parent2, ...]
+	parents := make(map[string][]string)
+
+	var buildGraph func([]*protogen.Message)
+	buildGraph = func(msgs []*protogen.Message) {
+		for _, parent := range msgs {
+			parentName := string(parent.Desc.FullName())
+
+			// Check all fields of this parent
+			for _, field := range parent.Fields {
+				if field.Desc.Kind() == protoreflect.MessageKind {
+					childName := string(field.Desc.Message().FullName())
+					parents[childName] = append(parents[childName], parentName)
+				}
+			}
+
+			// Recurse into nested messages
+			buildGraph(parent.Messages)
+		}
+	}
+
+	// Build graph from ALL files (this is the key difference from the original)
+	for _, file := range files {
+		buildGraph(file.Messages)
+	}
+
+	// BFS propagation using the global graph
+	var queue []string
+	for msgName := range needsRedact {
+		queue = append(queue, msgName)
+	}
+
+	for len(queue) > 0 {
+		childName := queue[0]
+		queue = queue[1:]
+
+		for _, parentName := range parents[childName] {
+			if !needsRedact[parentName] {
+				needsRedact[parentName] = true
+				queue = append(queue, parentName)
+			}
+		}
+	}
+}
+
+// GenerateFileWithGlobal generates a _redact.pb.go file using pre-computed global redact requirements.
+// This should be called after CollectGlobalRedactRequirements has analyzed all files.
+//
+// Parameters:
+//   - gen: The protogen plugin instance
+//   - file: The specific file to generate code for
+//   - globalNeedsRedact: Pre-computed map of message names that need redaction (from CollectGlobalRedactRequirements)
+//
+// Returns nil if no messages in this file require redaction.
+func GenerateFileWithGlobal(gen *protogen.Plugin, file *protogen.File, globalNeedsRedact map[string]bool) *protogen.GeneratedFile {
 	if len(file.Messages) == 0 {
 		return nil
 	}
 
-	// Phase 1: Collect messages that directly have redact fields.
-	// These are messages where at least one field has the redact option set.
-	messagesNeedRedact := make(map[string]bool)
-	collectMessagesWithDirectRedact(file.Messages, messagesNeedRedact)
-
-	// Phase 2: Propagate redact requirement up the message hierarchy.
-	// If message A contains a field of type B, and B needs redaction,
-	// then A also needs a Redact() method to properly redact the nested B.
-	propagateRedactRequirement(file.Messages, messagesNeedRedact)
-
-	// Phase 3: Build message descriptors for template-based code generation.
-	// Each descriptor contains all information needed to generate the Redact() method.
+	// Collect messages from THIS file that need redaction (using global map)
 	var messagesWithRedact []*messageDesc
-	collectMessagesForGeneration(file.Messages, messagesNeedRedact, &messagesWithRedact)
+	collectMessagesForGeneration(file.Messages, globalNeedsRedact, &messagesWithRedact)
 
-	// Skip file generation if no messages need redaction
 	if len(messagesWithRedact) == 0 {
 		return nil
 	}
@@ -162,79 +224,6 @@ func getRedactOptions(field *protogen.Field) *redact.RedactOptions {
 		return nil
 	}
 	return proto.GetExtension(opts, redact.E_Redact).(*redact.RedactOptions)
-}
-
-// propagateRedactRequirement propagates the redact requirement up the message hierarchy.
-//
-// This implements a fixed-point algorithm: if message A contains a field of type B,
-// and B needs redaction, then A also needs a Redact() method to properly handle
-// the nested message. The algorithm iterates until no new messages are marked.
-//
-// Example:
-//
-//	message Account {
-//	    User user = 1;  // User has redacted fields
-//	}
-//
-// Account will be marked as needing redaction because it contains User.
-// propagateRedactRequirement propagates the redact requirement up the message hierarchy.
-//
-// This implements a standard BFS algorithm on the reverse dependency graph.
-// Instead of repeatedly scanning all messages (O(N^2)), we:
-// 1. Build a reverse graph where edges point from Child -> Parents
-// 2. Start BFS from messages that already need redaction
-// 3. Mark parents as needing redaction and add them to the queue
-//
-// Complexity: O(N + E) where N is number of messages and E is number of field references.
-func propagateRedactRequirement(messages []*protogen.Message, needsRedact map[string]bool) {
-	// 1. Build reverse dependency graph: Child -> [Parent1, Parent2, ...]
-	// Map key: full name of the child message
-	// Map value: list of full names of parent messages that contain this child
-	parents := make(map[string][]string)
-
-	// Visit all messages to build the graph
-	// We need a helper to traverse nested messages
-	var buildGraph func([]*protogen.Message)
-	buildGraph = func(msgs []*protogen.Message) {
-		for _, parent := range msgs {
-			parentName := string(parent.Desc.FullName())
-
-			// Check all fields of this parent
-			for _, field := range parent.Fields {
-				if field.Desc.Kind() == protoreflect.MessageKind {
-					childName := string(field.Desc.Message().FullName())
-					parents[childName] = append(parents[childName], parentName)
-				}
-			}
-
-			// Recurse into nested messages
-			buildGraph(parent.Messages)
-		}
-	}
-	buildGraph(messages)
-
-	// 2. Initialize worklist (queue) with messages that already need redaction
-	var queue []string
-	for msgName := range needsRedact {
-		queue = append(queue, msgName)
-	}
-
-	// 3. Process queue (BFS)
-	// We don't need a separate 'visited' set because 'needsRedact' acts as one.
-	// If a message is in needsRedact, it has been visited/processed.
-	for len(queue) > 0 {
-		childName := queue[0]
-		queue = queue[1:]
-
-		// Find all parents that depend on this child
-		for _, parentName := range parents[childName] {
-			// If parent is not yet marked, mark it and add to queue
-			if !needsRedact[parentName] {
-				needsRedact[parentName] = true
-				queue = append(queue, parentName)
-			}
-		}
-	}
 }
 
 // collectMessagesForGeneration builds messageDesc structs for all messages that need
