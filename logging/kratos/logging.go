@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"reflect"
 	"strings"
 	"time"
 
@@ -168,6 +169,12 @@ func extractJSONOrString(s string) any {
 // If req implements Redacter, returns json.RawMessage to avoid double JSON escaping.
 // If req is a proto.Message, uses protojson to serialize it.
 func extractArgs(args any, skipRedact bool) any {
+	if args == nil {
+		return json.RawMessage("{}")
+	}
+	if rv := reflect.ValueOf(args); rv.Kind() == reflect.Ptr && rv.IsNil() {
+		return json.RawMessage("{}")
+	}
 	if !skipRedact {
 		if redacter, ok := args.(Redacter); ok {
 			// Return json.RawMessage so the logger won't escape the JSON string again
