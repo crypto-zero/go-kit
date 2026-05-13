@@ -42,6 +42,11 @@ func TestGenerateFileUsesDefaultHTTPStreamBinding(t *testing.T) {
 	for _, want := range []string{
 		`RegisterHTTPStream(s, "GET", "/v1/watch", OperationLiveServiceWatchSSE, srv.Watch, opts...)`,
 		`RegisterHTTPStream(s, "POST", "/v1/watch:tail", OperationLiveServiceWatchSSE, srv.Watch, opts...)`,
+		`type LiveServiceSSEClient interface`,
+		`func NewLiveServiceSSEClient(client *kratos.HTTPClient) LiveServiceSSEClient`,
+		`func (c *LiveServiceSSEClientImpl) Watch(ctx context.Context, in *WatchRequest, opts ...kratos.HTTPStreamCallOption) (*sse.Reader, error)`,
+		`path := binding.EncodeURL(pattern, in, true)`,
+		`return c.cc.Open(ctx, "GET", path, opts...)`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated code missing %q:\n%s", want, got)

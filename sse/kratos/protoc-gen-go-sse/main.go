@@ -141,8 +141,11 @@ func genService(g *protogen.GeneratedFile, service *protogen.Service, methods []
 	serviceName := service.GoName
 	contextIdent := g.QualifiedGoIdent(contextPackage.Ident("Context"))
 	streamIdent := g.QualifiedGoIdent(ssePackage.Ident("Stream"))
+	readerIdent := g.QualifiedGoIdent(ssePackage.Ident("Reader"))
 	serverIdent := g.QualifiedGoIdent(khttpPackage.Ident("Server"))
 	optionIdent := g.QualifiedGoIdent(kratosPackage.Ident("HTTPStreamOption"))
+	clientIdent := g.QualifiedGoIdent(kratosPackage.Ident("HTTPClient"))
+	callOptionIdent := g.QualifiedGoIdent(kratosPackage.Ident("HTTPStreamCallOption"))
 
 	g.P("type ", serviceName, "SSEServer interface {")
 	for _, item := range methods {
@@ -155,6 +158,23 @@ func genService(g *protogen.GeneratedFile, service *protogen.Service, methods []
 	for _, item := range methods {
 		g.P("_", serviceName, "_", item.method.GoName, "_SSE_Register(s, srv, opts...)")
 	}
+	g.P("}")
+	g.P()
+
+	g.P("type ", serviceName, "SSEClient interface {")
+	for _, item := range methods {
+		g.P(item.method.GoName, "(", contextIdent, ", *", item.method.Input.GoIdent, ", ...", callOptionIdent, ") (*", readerIdent, ", error)")
+	}
+	g.P("}")
+	g.P()
+
+	g.P("type ", serviceName, "SSEClientImpl struct {")
+	g.P("cc *", clientIdent)
+	g.P("}")
+	g.P()
+
+	g.P("func New", serviceName, "SSEClient(client *", clientIdent, ") ", serviceName, "SSEClient {")
+	g.P("return &", serviceName, "SSEClientImpl{client}")
 	g.P("}")
 	g.P()
 
@@ -178,6 +198,17 @@ func genMethod(g *protogen.GeneratedFile, item sseMethod) {
 	for _, route := range item.routes {
 		g.P(registerIdent, "(s, ", strconv.Quote(route.verb), ", ", strconv.Quote(route.path), ", ", operationConst, ", srv.", methodName, ", opts...)")
 	}
+	g.P("}")
+	g.P()
+
+	callOptionIdent := g.QualifiedGoIdent(kratosPackage.Ident("HTTPStreamCallOption"))
+	readerIdent := g.QualifiedGoIdent(ssePackage.Ident("Reader"))
+	bindingIdent := g.QualifiedGoIdent(protogen.GoImportPath("github.com/go-kratos/kratos/v2/transport/http/binding").Ident("EncodeURL"))
+	route := item.routes[0]
+	g.P("func (c *", serviceName, "SSEClientImpl) ", methodName, "(ctx ", g.QualifiedGoIdent(contextPackage.Ident("Context")), ", in *", item.method.Input.GoIdent, ", opts ...", callOptionIdent, ") (*", readerIdent, ", error) {")
+	g.P("pattern := ", strconv.Quote(route.path))
+	g.P("path := ", bindingIdent, "(pattern, in, true)")
+	g.P("return c.cc.Open(ctx, ", strconv.Quote(route.verb), ", path, opts...)")
 	g.P("}")
 	g.P()
 }
