@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package kit.auth.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/crypto-zero/go-kit/proto/kit/auth/v1;authv1";
+
+extend google.protobuf.MethodOptions {
+  // public marks an RPC operation as not requiring authenticated user context.
+  bool public = 105001;
+}

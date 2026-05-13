@@ -8,9 +8,11 @@ plugins:
       - run
       - ../errors/protoc-gen-kit-errors/main.go
     out: .
+    exclude_types:
+      - kit.errors.v1
   - local:
       - go
       - run
-      - ../protoc-gen-go-redact/main.go
+      - ../logging/protoc-gen-go-redact/main.go
     out: .
     opt: paths=source_relative
