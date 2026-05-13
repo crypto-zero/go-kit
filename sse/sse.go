@@ -5,8 +5,8 @@
 // channels. Authentication, request decoding, validation and routing are the
 // caller's responsibility.
 //
-// For a Kratos transport.Server adapter built on top of this package, see
-// the sub-package github.com/crypto-zero/go-kit/sse/kratos.
+// For helpers that mount SSE endpoints on a Kratos HTTP server, see the
+// sub-package github.com/crypto-zero/go-kit/sse/kratos.
 package sse
 
 import (

@@ -3,11 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 
 	ssev1 "github.com/crypto-zero/go-kit/proto/kit/sse/v1"
+	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/pluginpb"
@@ -38,8 +38,12 @@ func main() {
 type sseMethod struct {
 	service *protogen.Service
 	method  *protogen.Method
-	verb    string
-	path    string
+	routes  []sseRoute
+}
+
+type sseRoute struct {
+	verb string
+	path string
 }
 
 func generateFile(plugin *protogen.Plugin, file *protogen.File) {
@@ -76,26 +80,58 @@ func collectSSEMethods(file *protogen.File) []sseMethod {
 	var out []sseMethod
 	for _, service := range file.Services {
 		for _, method := range service.Methods {
-			rule, ok := proto.GetExtension(method.Desc.Options(), ssev1.E_ServerSentEvent).(*ssev1.StreamRule)
+			opts := method.Desc.Options()
+			if !proto.HasExtension(opts, ssev1.E_ServerSentEvent) {
+				continue
+			}
+			enabled, ok := proto.GetExtension(opts, ssev1.E_ServerSentEvent).(bool)
+			if !ok || !enabled {
+				continue
+			}
+			if !proto.HasExtension(opts, annotations.E_Http) {
+				continue
+			}
+			rule, ok := proto.GetExtension(opts, annotations.E_Http).(*annotations.HttpRule)
 			if !ok || rule == nil {
 				continue
 			}
-			verb, path := streamRuleHTTP(rule)
-			if verb == "" || path == "" {
+			var routes []sseRoute
+			for _, binding := range httpRuleBindings(rule) {
+				verb, path := httpRuleHTTP(binding)
+				if verb == "" || path == "" {
+					continue
+				}
+				routes = append(routes, sseRoute{verb: verb, path: path})
+			}
+			if len(routes) == 0 {
 				continue
 			}
-			out = append(out, sseMethod{service: service, method: method, verb: verb, path: path})
+			out = append(out, sseMethod{service: service, method: method, routes: routes})
 		}
 	}
 	return out
 }
 
-func streamRuleHTTP(rule *ssev1.StreamRule) (string, string) {
+func httpRuleBindings(rule *annotations.HttpRule) []*annotations.HttpRule {
+	out := []*annotations.HttpRule{rule}
+	out = append(out, rule.GetAdditionalBindings()...)
+	return out
+}
+
+func httpRuleHTTP(rule *annotations.HttpRule) (string, string) {
 	switch pattern := rule.GetPattern().(type) {
-	case *ssev1.StreamRule_Get:
-		return http.MethodGet, pattern.Get
-	case *ssev1.StreamRule_Post:
-		return http.MethodPost, pattern.Post
+	case *annotations.HttpRule_Get:
+		return "GET", pattern.Get
+	case *annotations.HttpRule_Put:
+		return "PUT", pattern.Put
+	case *annotations.HttpRule_Post:
+		return "POST", pattern.Post
+	case *annotations.HttpRule_Delete:
+		return "DELETE", pattern.Delete
+	case *annotations.HttpRule_Patch:
+		return "PATCH", pattern.Patch
+	case *annotations.HttpRule_Custom:
+		return pattern.Custom.Kind, pattern.Custom.Path
 	default:
 		return "", ""
 	}
@@ -130,28 +166,18 @@ func genService(g *protogen.GeneratedFile, service *protogen.Service, methods []
 func genMethod(g *protogen.GeneratedFile, item sseMethod) {
 	serviceName := item.service.GoName
 	methodName := item.method.GoName
-	input := item.method.Input.GoIdent
 	operationConst := "Operation" + serviceName + methodName + "SSE"
 
 	serverIdent := g.QualifiedGoIdent(khttpPackage.Ident("Server"))
-	contextIdent := g.QualifiedGoIdent(khttpPackage.Ident("Context"))
 	optionIdent := g.QualifiedGoIdent(kratosPackage.Ident("HTTPStreamOption"))
-	registerIdent := g.QualifiedGoIdent(kratosPackage.Ident("RegisterHTTPStreamBound"))
+	registerIdent := g.QualifiedGoIdent(kratosPackage.Ident("RegisterHTTPStream"))
 
 	g.P("const ", operationConst, ` = "/`, item.method.Desc.Parent().FullName(), `/`, item.method.Desc.Name(), `"`)
 	g.P()
 	g.P("func _", serviceName, "_", methodName, "_SSE_Register(s *", serverIdent, ", srv ", serviceName, "SSEServer, opts ...", optionIdent, ") {")
-	g.P(registerIdent, "(s, ", strconv.Quote(item.verb), ", ", strconv.Quote(item.path), ", ", operationConst, ",")
-	g.P("func(ctx ", contextIdent, ", in *", input, ") error {")
-	if item.verb == http.MethodGet {
-		g.P("return ctx.BindQuery(in)")
-	} else {
-		g.P("return ctx.Bind(in)")
+	for _, route := range item.routes {
+		g.P(registerIdent, "(s, ", strconv.Quote(route.verb), ", ", strconv.Quote(route.path), ", ", operationConst, ", srv.", methodName, ", opts...)")
 	}
-	g.P("},")
-	g.P("srv.", methodName, ",")
-	g.P("opts...,")
-	g.P(")")
 	g.P("}")
 	g.P()
 }

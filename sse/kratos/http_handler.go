@@ -5,9 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	authkratos "github.com/crypto-zero/go-kit/auth/kratos"
 	khttp "github.com/go-kratos/kratos/v2/transport/http"
-	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/crypto-zero/go-kit/sse"
 )
@@ -47,13 +45,10 @@ func RegisterHTTPStream[Req any](
 	do func(ctx context.Context, req *Req, st *sse.Stream) error,
 	opts ...HTTPStreamOption,
 ) {
-	RegisterHTTPStreamBound(srv, method, path, operation, bindHTTPStreamRequest[Req], do, opts...)
+	registerHTTPStream(srv, method, path, operation, bindHTTPStreamRequest[Req], do, opts...)
 }
 
-// RegisterHTTPStreamBound mounts an SSE endpoint with caller-supplied request
-// binding. Generated handlers use this to keep protobuf HTTP binding code in
-// generated files while reusing the shared streaming lifecycle.
-func RegisterHTTPStreamBound[Req any](
+func registerHTTPStream[Req any](
 	srv *khttp.Server,
 	method string,
 	path string,
@@ -88,21 +83,6 @@ func RegisterHTTPStreamBound[Req any](
 		_, err := h(streamCtx, req)
 		return err
 	}, cfg.filters...)
-}
-
-// RegisterHTTPStreamMethod mounts an SSE endpoint for a proto method
-// descriptor. The Kratos operation is derived from the method name
-// (`/package.Service/Method`) so auth selectors, logging and tracing use the
-// same operation identity as generated Kratos HTTP handlers.
-func RegisterHTTPStreamMethod[Req any](
-	srv *khttp.Server,
-	method protoreflect.MethodDescriptor,
-	httpMethod string,
-	path string,
-	do func(ctx context.Context, req *Req, st *sse.Stream) error,
-	opts ...HTTPStreamOption,
-) {
-	RegisterHTTPStream(srv, httpMethod, path, authkratos.OperationName(method), do, opts...)
 }
 
 func bindHTTPStreamRequest[Req any](ctx khttp.Context, target *Req) error {

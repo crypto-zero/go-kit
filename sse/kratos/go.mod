@@ -5,6 +5,7 @@ go 1.26.3
 require (
 	github.com/crypto-zero/go-kit v0.0.0-20260128101518-0545cf5a3fac
 	github.com/go-kratos/kratos/v2 v2.9.2
+	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217
 	google.golang.org/protobuf v1.36.11
 )
 

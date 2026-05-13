@@ -1,6 +1,7 @@
 package kratos_test
 
 import (
+	"bufio"
 	"context"
 	"net/http"
 	"net/http/httptest"
@@ -11,10 +12,6 @@ import (
 	"github.com/go-kratos/kratos/v2/middleware"
 	ktransport "github.com/go-kratos/kratos/v2/transport"
 	khttp "github.com/go-kratos/kratos/v2/transport/http"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protodesc"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/crypto-zero/go-kit/sse"
@@ -122,69 +119,17 @@ func TestHTTPStreamHandler_DetachesKratosHTTPTimeout(t *testing.T) {
 	}
 }
 
-func TestHTTPStreamHandler_MethodDescriptorSetsOperation(t *testing.T) {
-	const operation = "/test.live.v1.LiveService/Watch"
-	seen := make(chan string, 1)
-	srv := khttp.NewServer(
-		khttp.Timeout(0),
-		khttp.Middleware(func(next middleware.Handler) middleware.Handler {
-			return func(ctx context.Context, req any) (any, error) {
-				tr, ok := ktransport.FromServerContext(ctx)
-				if !ok {
-					t.Fatal("missing transport")
-				}
-				seen <- tr.Operation()
-				return next(ctx, req)
-			}
-		}),
-	)
-	method := testMethodDescriptor(t)
-	ksse.RegisterHTTPStreamMethod(srv, method, http.MethodGet, "/v1/method",
-		func(_ context.Context, _ *durationpb.Duration, st *sse.Stream) error {
-			return st.Done()
-		},
-	)
-
-	ts := httptest.NewServer(srv)
-	defer ts.Close()
-
-	resp, err := http.Get(ts.URL + "/v1/method")
-	if err != nil {
-		t.Fatalf("GET: %v", err)
-	}
-	_ = resp.Body.Close()
-
-	select {
-	case got := <-seen:
-		if got != operation {
-			t.Errorf("operation = %q, want %q", got, operation)
-		}
-	case <-time.After(time.Second):
-		t.Fatal("middleware did not run")
-	}
-}
-
-func testMethodDescriptor(t *testing.T) protoreflect.MethodDescriptor {
+func readAll(t *testing.T, r interface {
+	Read([]byte) (int, error)
+}) string {
 	t.Helper()
-	fd, err := protodesc.NewFile(&descriptorpb.FileDescriptorProto{
-		Syntax:  proto.String("proto3"),
-		Name:    proto.String("test/live/v1/live.proto"),
-		Package: proto.String("test.live.v1"),
-		Service: []*descriptorpb.ServiceDescriptorProto{{
-			Name: proto.String("LiveService"),
-			Method: []*descriptorpb.MethodDescriptorProto{{
-				Name:       proto.String("Watch"),
-				InputType:  proto.String(".test.live.v1.WatchRequest"),
-				OutputType: proto.String(".test.live.v1.WatchResponse"),
-			}},
-		}},
-		MessageType: []*descriptorpb.DescriptorProto{
-			{Name: proto.String("WatchRequest")},
-			{Name: proto.String("WatchResponse")},
-		},
-	}, nil)
-	if err != nil {
-		t.Fatalf("NewFile: %v", err)
+	var sb strings.Builder
+	br := bufio.NewReader(r)
+	for {
+		line, err := br.ReadString('\n')
+		sb.WriteString(line)
+		if err != nil {
+			return sb.String()
+		}
 	}
-	return fd.Services().ByName("LiveService").Methods().ByName("Watch")
 }
