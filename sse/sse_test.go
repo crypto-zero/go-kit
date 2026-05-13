@@ -1,8 +1,11 @@
 package sse
 
 import (
+	"bufio"
 	"context"
 	"errors"
+	"net"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -227,6 +230,19 @@ func TestStream_Heartbeat(t *testing.T) {
 	}
 }
 
+func TestStream_HeartbeatNonPositiveIntervalIsNoop(t *testing.T) {
+	rec := httptest.NewRecorder()
+	s := NewStream(rec)
+
+	stop := s.Heartbeat(context.Background(), 0)
+	stop()
+	stop()
+
+	if got := rec.Body.String(); got != "" {
+		t.Errorf("body = %q, want empty", got)
+	}
+}
+
 func TestLastEventID(t *testing.T) {
 	r := httptest.NewRequest("GET", "/x", nil)
 	r.Header.Set(LastEventIDHeader, "42")
@@ -271,4 +287,47 @@ func TestDetachWriteTimeout_PropagatesCancel(t *testing.T) {
 	case <-time.After(100 * time.Millisecond):
 		t.Errorf("detached context not cancelled when parent was Canceled")
 	}
+}
+
+func TestDetachWriteTimeout_NonPositiveClearsWriteDeadline(t *testing.T) {
+	var got time.Time
+	w := deadlineResponseWriter{
+		ResponseWriter: httptest.NewRecorder(),
+		setWriteDeadline: func(t time.Time) error {
+			got = t
+			return nil
+		},
+	}
+	req := httptest.NewRequest("POST", "/x", nil)
+
+	_ = DetachWriteTimeout(w, req, 0)
+
+	if !got.IsZero() {
+		t.Errorf("write deadline = %v, want zero time", got)
+	}
+}
+
+type deadlineResponseWriter struct {
+	http.ResponseWriter
+	setWriteDeadline func(time.Time) error
+}
+
+func (w deadlineResponseWriter) SetWriteDeadline(t time.Time) error {
+	return w.setWriteDeadline(t)
+}
+
+func (w deadlineResponseWriter) SetReadDeadline(time.Time) error {
+	return nil
+}
+
+func (w deadlineResponseWriter) EnableFullDuplex() error {
+	return nil
+}
+
+func (w deadlineResponseWriter) Flush() error {
+	return nil
+}
+
+func (w deadlineResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	return nil, nil, http.ErrNotSupported
 }

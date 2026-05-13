@@ -199,6 +199,9 @@ func (s *Stream) Comment(text string) error {
 // Use this for long-lived streams that sit behind proxies with idle
 // connection timeouts.
 func (s *Stream) Heartbeat(ctx context.Context, interval time.Duration) (stop func()) {
+	if interval <= 0 {
+		return func() {}
+	}
 	ctx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
 	go func() {

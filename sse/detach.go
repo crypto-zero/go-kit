@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -28,20 +29,35 @@ import (
 // ctx.Done() still see client disconnects.
 func DetachWriteTimeout(w http.ResponseWriter, r *http.Request, writeTimeout time.Duration) *http.Request {
 	rc := http.NewResponseController(w)
-	_ = rc.SetWriteDeadline(time.Now().Add(writeTimeout))
+	deadline := time.Time{}
+	if writeTimeout > 0 {
+		deadline = time.Now().Add(writeTimeout)
+	}
+	_ = rc.SetWriteDeadline(deadline)
 
-	parent := r.Context()
+	ctx, _ := DetachDeadlineContext(r.Context())
+	return r.WithContext(ctx)
+}
+
+// DetachDeadlineContext returns a context that keeps parent values but ignores
+// parent DeadlineExceeded cancellation. Other parent cancellations, such as a
+// client disconnect, are still forwarded.
+//
+// The returned stop function unregisters the parent callback and cancels the
+// detached context. Callers that own a bounded streaming lifecycle should defer
+// stop when the stream ends.
+func DetachDeadlineContext(parent context.Context) (context.Context, func()) {
 	ctx, cancel := context.WithCancel(context.WithoutCancel(parent))
-	go func() {
-		<-parent.Done()
-		// Forward only genuine client disconnects. When the parent's Err
-		// is DeadlineExceeded the server-wide timer fired — that is the
-		// signal we are explicitly detaching from, so the replacement
-		// context must stay alive. The cancel func is then released when
-		// the handler returns and references drop.
+	stopParent := context.AfterFunc(parent, func() {
 		if !errors.Is(parent.Err(), context.DeadlineExceeded) {
 			cancel()
 		}
-	}()
-	return r.WithContext(ctx)
+	})
+	var once sync.Once
+	return ctx, func() {
+		once.Do(func() {
+			stopParent()
+			cancel()
+		})
+	}
 }

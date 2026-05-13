@@ -117,22 +117,12 @@ func preStream[Req any](
 // Callers should defer end immediately after this call.
 func (s *Server) beginStream(ctx context.Context, w http.ResponseWriter) (*sse.Stream, func()) {
 	st := sse.NewStream(w)
-	stopBeat := s.startHeartbeat(ctx, st)
+	stopBeat := st.Heartbeat(ctx, s.heartbeat)
 	s.active.Add(1)
 	return st, func() {
 		stopBeat()
 		s.active.Add(-1)
 	}
-}
-
-// startHeartbeat fires a periodic comment frame on st when the server
-// has Heartbeat enabled. Returns a stop function (a no-op when
-// heartbeat is disabled).
-func (s *Server) startHeartbeat(ctx context.Context, st *sse.Stream) func() {
-	if s.heartbeat <= 0 {
-		return func() {}
-	}
-	return st.Heartbeat(ctx, s.heartbeat)
 }
 
 // chainFor composes the middleware chain for one handler: server-wide

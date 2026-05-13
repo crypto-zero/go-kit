@@ -2,11 +2,9 @@ package kratos
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
-	"sync"
 	"time"
 
 	authkratos "github.com/crypto-zero/go-kit/auth/kratos"
@@ -65,11 +63,11 @@ func RegisterHTTPStream[Req any](
 		if operation != "" {
 			khttp.SetOperation(ctx, operation)
 		}
-		streamCtx, stopStreamCtx := detachHTTPTimeout(ctx)
+		streamCtx, stopStreamCtx := sse.DetachDeadlineContext(ctx)
 		defer stopStreamCtx()
 		h := ctx.Middleware(func(mctx context.Context, raw any) (any, error) {
 			st := sse.NewStream(ctx.Response())
-			stopBeat := startHTTPHeartbeat(mctx, st, cfg.heartbeat)
+			stopBeat := st.Heartbeat(mctx, cfg.heartbeat)
 			defer stopBeat()
 			if err := do(mctx, raw.(*Req), st); err != nil {
 				_ = st.Error(err.Error())
@@ -108,33 +106,6 @@ func bindHTTPStreamRequest(ctx khttp.Context, target any) error {
 	}
 }
 
-func startHTTPHeartbeat(ctx context.Context, st *sse.Stream, interval time.Duration) func() {
-	if interval <= 0 {
-		return func() {}
-	}
-	return st.Heartbeat(ctx, interval)
-}
-
-func detachHTTPTimeout(parent context.Context) (context.Context, func()) {
-	ctx, cancel := context.WithCancel(context.WithoutCancel(parent))
-	done := make(chan struct{})
-	go func() {
-		select {
-		case <-parent.Done():
-			if !errors.Is(parent.Err(), context.DeadlineExceeded) {
-				cancel()
-			}
-		case <-done:
-		}
-	}()
-	var once sync.Once
-	return ctx, func() {
-		once.Do(func() {
-			close(done)
-			cancel()
-		})
-	}
-}
 
 func decodeProtoQuery(r *http.Request, msg proto.Message) error {
 	q := r.URL.Query()
