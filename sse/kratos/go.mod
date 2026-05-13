@@ -1,6 +1,6 @@
 module github.com/crypto-zero/go-kit/sse/kratos
 
-go 1.25.5
+go 1.26.3
 
 require (
 	github.com/crypto-zero/go-kit v0.0.0-20260128101518-0545cf5a3fac

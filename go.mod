@@ -1,6 +1,6 @@
 module github.com/crypto-zero/go-kit
 
-go 1.25.5
+go 1.26.3
 
 require (
 	entgo.io/ent v0.14.5

@@ -1,6 +1,6 @@
 module github.com/crypto-zero/go-kit/logging/kratos
 
-go 1.25.5
+go 1.26.3
 
 require (
 	github.com/go-kratos/kratos/v2 v2.9.2
