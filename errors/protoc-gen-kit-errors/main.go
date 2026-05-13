@@ -107,9 +107,7 @@ func (g *GenerateErrorDeclare) generateFile(
 
 		sinkVarName := varName
 		lowSinkName, lowParentName := strings.ToLower(sinkVarName), strings.ToLower(parentDescName)
-		if strings.HasPrefix(lowSinkName, lowParentName) {
-			lowSinkName = strings.TrimPrefix(lowSinkName, lowParentName)
-		}
+		lowSinkName = strings.TrimPrefix(lowSinkName, lowParentName)
 		sinkVarName = "Err" + strcase.ToCamel(lowSinkName)
 
 		gf.P(strings.TrimSpace(ev.Comments.Leading.String()))

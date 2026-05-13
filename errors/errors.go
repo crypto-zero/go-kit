@@ -3,6 +3,7 @@ package errors
 import (
 	"errors"
 	"fmt"
+	"maps"
 
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	spb "google.golang.org/genproto/googleapis/rpc/status"
@@ -160,9 +161,7 @@ func FromError(err error) *Error {
 			if info, ok := first.(*errdetails.ErrorInfo); ok {
 				ret.Info.Reason, ret.Info.Domain = info.Reason, info.Domain
 				ret.Info.Metadata = make(map[string]string, len(info.Metadata))
-				for k, v := range info.Metadata {
-					ret.Info.Metadata[k] = v
-				}
+				maps.Copy(ret.Info.Metadata, info.Metadata)
 				ret.Details = ret.Details[1:]
 			}
 		}
