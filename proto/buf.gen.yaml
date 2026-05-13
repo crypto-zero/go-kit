@@ -16,3 +16,5 @@ plugins:
       - ../logging/protoc-gen-go-redact/main.go
     out: .
     opt: paths=source_relative
+    exclude_types:
+      - kit.sse.v1

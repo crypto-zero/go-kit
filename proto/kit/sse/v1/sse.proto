@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package kit.sse.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/crypto-zero/go-kit/proto/kit/sse/v1;ssev1";
+
+extend google.protobuf.MethodOptions {
+  StreamRule server_sent_event = 81001;
+}
+
+message StreamRule {
+  oneof pattern {
+    string get = 1;
+    string post = 2;
+  }
+}
