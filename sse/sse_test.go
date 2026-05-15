@@ -169,6 +169,20 @@ func TestPump_ErrChClosedSilently(t *testing.T) {
 	}
 }
 
+func TestPump_NilErrReturnsSilently(t *testing.T) {
+	rec := httptest.NewRecorder()
+	s := NewStream(rec)
+	chunks := make(chan string)
+	errs := make(chan error, 1)
+	errs <- nil
+	if err := s.Pump(context.Background(), chunks, errs); err != nil {
+		t.Errorf("Pump on nil err = %v, want nil", err)
+	}
+	if got := rec.Body.String(); got != "" {
+		t.Errorf("body = %q, want empty", got)
+	}
+}
+
 func TestPump_ContextCancel(t *testing.T) {
 	rec := httptest.NewRecorder()
 	s := NewStream(rec)

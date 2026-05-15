@@ -44,6 +44,7 @@ type sseMethod struct {
 type sseRoute struct {
 	verb string
 	path string
+	body string
 }
 
 func generateFile(plugin *protogen.Plugin, file *protogen.File) {
@@ -101,7 +102,7 @@ func collectSSEMethods(file *protogen.File) []sseMethod {
 				if verb == "" || path == "" {
 					continue
 				}
-				routes = append(routes, sseRoute{verb: verb, path: path})
+				routes = append(routes, sseRoute{verb: verb, path: path, body: binding.GetBody()})
 			}
 			if len(routes) == 0 {
 				continue
@@ -146,6 +147,7 @@ func genService(g *protogen.GeneratedFile, service *protogen.Service, methods []
 	optionIdent := g.QualifiedGoIdent(kratosPackage.Ident("HTTPStreamOption"))
 	clientIdent := g.QualifiedGoIdent(kratosPackage.Ident("HTTPClient"))
 	callOptionIdent := g.QualifiedGoIdent(kratosPackage.Ident("HTTPStreamCallOption"))
+	clientImpl := unexport(serviceName) + "SSEClient"
 
 	g.P("type ", serviceName, "SSEServer interface {")
 	for _, item := range methods {
@@ -168,13 +170,13 @@ func genService(g *protogen.GeneratedFile, service *protogen.Service, methods []
 	g.P("}")
 	g.P()
 
-	g.P("type ", serviceName, "SSEClientImpl struct {")
+	g.P("type ", clientImpl, " struct {")
 	g.P("cc *", clientIdent)
 	g.P("}")
 	g.P()
 
 	g.P("func New", serviceName, "SSEClient(client *", clientIdent, ") ", serviceName, "SSEClient {")
-	g.P("return &", serviceName, "SSEClientImpl{client}")
+	g.P("return &", clientImpl, "{cc: client}")
 	g.P("}")
 	g.P()
 
@@ -204,13 +206,84 @@ func genMethod(g *protogen.GeneratedFile, item sseMethod) {
 	callOptionIdent := g.QualifiedGoIdent(kratosPackage.Ident("HTTPStreamCallOption"))
 	readerIdent := g.QualifiedGoIdent(ssePackage.Ident("Reader"))
 	bindingIdent := g.QualifiedGoIdent(protogen.GoImportPath("github.com/go-kratos/kratos/v2/transport/http/binding").Ident("EncodeURL"))
+	clientImpl := unexport(serviceName) + "SSEClient"
+	// Match protoc-gen-go-http: generated clients call the primary
+	// google.api.http binding; additional_bindings are server aliases.
 	route := item.routes[0]
-	g.P("func (c *", serviceName, "SSEClientImpl) ", methodName, "(ctx ", g.QualifiedGoIdent(contextPackage.Ident("Context")), ", in *", item.method.Input.GoIdent, ", opts ...", callOptionIdent, ") (*", readerIdent, ", error) {")
+	bodyArg := "nil"
+	needQuery := "true"
+	if route.body != "" {
+		bodyArg = bodyExpr(route.body)
+		needQuery = "false"
+	}
+	g.P("func (c *", clientImpl, ") ", methodName, "(ctx ", g.QualifiedGoIdent(contextPackage.Ident("Context")), ", in *", item.method.Input.GoIdent, ", opts ...", callOptionIdent, ") (*", readerIdent, ", error) {")
 	g.P("pattern := ", strconv.Quote(route.path))
-	g.P("path := ", bindingIdent, "(pattern, in, true)")
-	g.P("return c.cc.Open(ctx, ", strconv.Quote(route.verb), ", path, opts...)")
+	g.P("path := ", bindingIdent, "(pattern, in, ", needQuery, ")")
+	g.P("return c.cc.Open(ctx, ", strconv.Quote(route.verb), ", path, ", bodyArg, ", opts...)")
 	g.P("}")
 	g.P()
+}
+
+func unexport(s string) string {
+	if s == "" {
+		return ""
+	}
+	return strings.ToLower(s[:1]) + s[1:]
+}
+
+func bodyExpr(body string) string {
+	if body == "*" {
+		return "in"
+	}
+	return "in." + camelCaseVars(body)
+}
+
+func camelCaseVars(s string) string {
+	subs := strings.Split(s, ".")
+	vars := make([]string, 0, len(subs))
+	for _, sub := range subs {
+		vars = append(vars, camelCase(sub))
+	}
+	return strings.Join(vars, ".")
+}
+
+func camelCase(s string) string {
+	if s == "" {
+		return ""
+	}
+	t := make([]byte, 0, 32)
+	i := 0
+	if s[0] == '_' {
+		t = append(t, 'X')
+		i++
+	}
+	for ; i < len(s); i++ {
+		c := s[i]
+		if c == '_' && i+1 < len(s) && isASCIILower(s[i+1]) {
+			continue
+		}
+		if isASCIIDigit(c) {
+			t = append(t, c)
+			continue
+		}
+		if isASCIILower(c) {
+			c ^= ' '
+		}
+		t = append(t, c)
+		for i+1 < len(s) && isASCIILower(s[i+1]) {
+			i++
+			t = append(t, s[i])
+		}
+	}
+	return string(t)
+}
+
+func isASCIILower(c byte) bool {
+	return 'a' <= c && c <= 'z'
+}
+
+func isASCIIDigit(c byte) bool {
+	return '0' <= c && c <= '9'
 }
 
 func protocVersion(plugin *protogen.Plugin) string {

@@ -234,6 +234,7 @@ func (s *Stream) Heartbeat(ctx context.Context, interval time.Duration) (stop fu
 //   - chunks is closed: Done is sent and nil is returned;
 //   - errs delivers a non-nil error: that error is forwarded via Error and
 //     returned (no Done is sent);
+//   - errs delivers nil: returns nil silently (no Done);
 //   - errs is closed: returns nil silently (no Done);
 //   - ctx is cancelled: returns ctx.Err() silently (no Done).
 //
@@ -256,10 +257,11 @@ func (s *Stream) Pump(ctx context.Context, chunks <-chan string, errs <-chan err
 			if !ok {
 				return nil
 			}
-			if err != nil {
-				_ = s.Error(err.Error())
-				return err
+			if err == nil {
+				return nil
 			}
+			_ = s.Error(err.Error())
+			return err
 		case <-ctx.Done():
 			return ctx.Err()
 		}

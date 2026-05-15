@@ -40,16 +40,31 @@ func TestGenerateFileUsesDefaultHTTPStreamBinding(t *testing.T) {
 		t.Fatalf("register function count = %d, want 1:\n%s", count, got)
 	}
 	for _, want := range []string{
-		`RegisterHTTPStream(s, "GET", "/v1/watch", OperationLiveServiceWatchSSE, srv.Watch, opts...)`,
-		`RegisterHTTPStream(s, "POST", "/v1/watch:tail", OperationLiveServiceWatchSSE, srv.Watch, opts...)`,
+		`RegisterHTTPStream(s, "POST", "/v1/watch", OperationLiveServiceWatchSSE, srv.Watch, opts...)`,
+		`RegisterHTTPStream(s, "GET", "/v1/watch:tail", OperationLiveServiceWatchSSE, srv.Watch, opts...)`,
 		`type LiveServiceSSEClient interface`,
 		`func NewLiveServiceSSEClient(client *kratos.HTTPClient) LiveServiceSSEClient`,
-		`func (c *LiveServiceSSEClientImpl) Watch(ctx context.Context, in *WatchRequest, opts ...kratos.HTTPStreamCallOption) (*sse.Reader, error)`,
-		`path := binding.EncodeURL(pattern, in, true)`,
-		`return c.cc.Open(ctx, "GET", path, opts...)`,
+		`func (c *liveServiceSSEClient) Watch(ctx context.Context, in *WatchRequest, opts ...kratos.HTTPStreamCallOption) (*sse.Reader, error)`,
+		`path := binding.EncodeURL(pattern, in, false)`,
+		`return c.cc.Open(ctx, "POST", path, in, opts...)`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("generated code missing %q:\n%s", want, got)
+		}
+	}
+}
+
+func TestBodyExpr(t *testing.T) {
+	for _, tc := range []struct {
+		body string
+		want string
+	}{
+		{body: "*", want: "in"},
+		{body: "payload", want: "in.Payload"},
+		{body: "filter_box.zoom_level", want: "in.FilterBox.ZoomLevel"},
+	} {
+		if got := bodyExpr(tc.body); got != tc.want {
+			t.Fatalf("bodyExpr(%q) = %q, want %q", tc.body, got, tc.want)
 		}
 	}
 }
@@ -60,10 +75,10 @@ func testCodeGeneratorRequest(t *testing.T) *pluginpb.CodeGeneratorRequest {
 	opts := &descriptorpb.MethodOptions{}
 	proto.SetExtension(opts, ssev1.E_ServerSentEvent, true)
 	proto.SetExtension(opts, annotations.E_Http, &annotations.HttpRule{
-		Pattern: &annotations.HttpRule_Get{Get: "/v1/watch"},
+		Pattern: &annotations.HttpRule_Post{Post: "/v1/watch"},
+		Body:    "*",
 		AdditionalBindings: []*annotations.HttpRule{{
-			Pattern: &annotations.HttpRule_Post{Post: "/v1/watch:tail"},
-			Body:    "*",
+			Pattern: &annotations.HttpRule_Get{Get: "/v1/watch:tail"},
 		}},
 	})
 

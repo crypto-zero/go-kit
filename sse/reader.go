@@ -11,8 +11,9 @@ import (
 
 // Reader reads Server-Sent Events from an HTTP response body.
 type Reader struct {
-	r *bufio.Reader
-	c io.Closer
+	r      *bufio.Reader
+	c      io.Closer
+	lastID string
 }
 
 // NewReader returns an SSE event reader for r.
@@ -29,12 +30,12 @@ func (r *Reader) Next() (*Event, error) {
 	var ev Event
 	var data []string
 	seen := false
+	idSeen := false
 	for {
 		line, err := r.r.ReadString('\n')
 		if err != nil {
 			if errors.Is(err, io.EOF) && seen {
-				ev.Data = strings.Join(data, "\n")
-				return &ev, nil
+				return r.finishEvent(ev, data, idSeen), nil
 			}
 			return nil, err
 		}
@@ -43,15 +44,16 @@ func (r *Reader) Next() (*Event, error) {
 			if !seen {
 				continue
 			}
-			ev.Data = strings.Join(data, "\n")
-			return &ev, nil
+			return r.finishEvent(ev, data, idSeen), nil
 		}
 		if strings.HasPrefix(line, ":") {
 			continue
 		}
 		seen = true
 		field, value, ok := strings.Cut(line, ":")
-		if ok && strings.HasPrefix(value, " ") {
+		if !ok {
+			value = ""
+		} else if strings.HasPrefix(value, " ") {
 			value = value[1:]
 		}
 		switch field {
@@ -59,6 +61,7 @@ func (r *Reader) Next() (*Event, error) {
 			ev.Event = value
 		case "id":
 			ev.ID = value
+			idSeen = true
 		case "data":
 			data = append(data, value)
 		case "retry":
@@ -67,6 +70,16 @@ func (r *Reader) Next() (*Event, error) {
 			}
 		}
 	}
+}
+
+func (r *Reader) finishEvent(ev Event, data []string, idSeen bool) *Event {
+	if idSeen {
+		r.lastID = ev.ID
+	} else {
+		ev.ID = r.lastID
+	}
+	ev.Data = strings.Join(data, "\n")
+	return &ev
 }
 
 // Close closes the underlying reader when it implements io.Closer.

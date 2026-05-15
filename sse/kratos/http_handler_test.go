@@ -20,7 +20,7 @@ import (
 
 func TestHTTPStreamHandler_BindsProtoQueryAndStreamsOnKratosHTTP(t *testing.T) {
 	srv := khttp.NewServer(khttp.Timeout(0))
-	ksse.RegisterHTTPStream(srv, http.MethodGet, "/v1/duration", "/test.Duration/Watch",
+	ksse.RegisterHTTPStream(srv, http.MethodGet, "/v1/duration/{seconds}", "/test.Duration/Watch",
 		func(_ context.Context, req *durationpb.Duration, st *sse.Stream) error {
 			if req.GetSeconds() != 12 || req.GetNanos() != 34 {
 				t.Fatalf("request = %ds/%dns, want 12s/34ns", req.GetSeconds(), req.GetNanos())
@@ -32,7 +32,7 @@ func TestHTTPStreamHandler_BindsProtoQueryAndStreamsOnKratosHTTP(t *testing.T) {
 	ts := httptest.NewServer(srv)
 	defer ts.Close()
 
-	resp, err := http.Get(ts.URL + "/v1/duration?seconds=12&nanos=34")
+	resp, err := http.Get(ts.URL + "/v1/duration/12?nanos=34")
 	if err != nil {
 		t.Fatalf("GET: %v", err)
 	}

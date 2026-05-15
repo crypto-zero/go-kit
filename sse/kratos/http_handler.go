@@ -86,6 +86,9 @@ func registerHTTPStream[Req any](
 }
 
 func bindHTTPStreamRequest[Req any](ctx khttp.Context, target *Req) error {
+	if err := ctx.BindVars(target); err != nil {
+		return err
+	}
 	switch ctx.Request().Method {
 	case http.MethodGet, http.MethodHead:
 		return ctx.BindQuery(target)
