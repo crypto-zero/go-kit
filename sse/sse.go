@@ -6,7 +6,7 @@
 // caller's responsibility.
 //
 // For helpers that mount SSE endpoints on a Kratos HTTP server, see the
-// sub-package github.com/crypto-zero/go-kit/sse/kratos.
+// module package github.com/crypto-zero/go-kit/kratos/sse.
 package sse
 
 import (

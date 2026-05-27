@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package kit.ratelimit.v1;
+
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/duration.proto";
+
+option go_package = "github.com/crypto-zero/go-kit/proto/kit/ratelimit/v1;ratelimitv1";
+
+extend google.protobuf.MethodOptions {
+  // rate_limit configures per-method rate limiting for Kratos middleware.
+  RateLimit rate_limit = 106001;
+}
+
+message RateLimit {
+  // rate is the number of tokens replenished every per duration.
+  int32 rate = 1;
+
+  // per is the refill window for rate tokens.
+  google.protobuf.Duration per = 2;
+
+  // burst is the maximum number of tokens a key can accumulate.
+  int32 burst = 3;
+
+  // key selects how requests are grouped into buckets.
+  Key key = 4;
+}
+
+enum Key {
+  KEY_UNSPECIFIED = 0;
+  KEY_OPERATION = 1;
+  KEY_CLIENT_IP = 2;
+  KEY_OPERATION_CLIENT_IP = 3;
+}
