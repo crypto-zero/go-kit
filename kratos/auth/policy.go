@@ -2,9 +2,10 @@
 package auth
 
 import (
-	"github.com/crypto-zero/go-kit/kratos/internal/protoop"
 	authv1 "github.com/crypto-zero/go-kit/proto/kit/auth/v1"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 // OperationPolicy reports whether a Kratos operation should run through
@@ -53,17 +54,27 @@ func (p *OperationPolicy) RequiresAuth(operation string) bool {
 
 // OperationName returns the Kratos operation string for a proto method.
 func OperationName(m protoreflect.MethodDescriptor) string {
-	return protoop.OperationName(m)
+	return "/" + string(m.Parent().FullName()) + "/" + string(m.Name())
 }
 
 func registerPublicFromFile(p *OperationPolicy, fd protoreflect.FileDescriptor) {
-	protoop.WalkMethods([]protoreflect.FileDescriptor{fd}, func(m protoreflect.MethodDescriptor) {
-		if methodIsPublic(m) {
-			p.public[protoop.OperationName(m)] = struct{}{}
+	services := fd.Services()
+	for i := range services.Len() {
+		methods := services.Get(i).Methods()
+		for j := range methods.Len() {
+			m := methods.Get(j)
+			if methodIsPublic(m) {
+				p.public[OperationName(m)] = struct{}{}
+			}
 		}
-	})
+	}
 }
 
 func methodIsPublic(m protoreflect.MethodDescriptor) bool {
-	return protoop.BoolExtension(m, authv1.E_Public)
+	opts, ok := m.Options().(*descriptorpb.MethodOptions)
+	if !ok || opts == nil || !proto.HasExtension(opts, authv1.E_Public) {
+		return false
+	}
+	v, ok := proto.GetExtension(opts, authv1.E_Public).(bool)
+	return ok && v
 }
