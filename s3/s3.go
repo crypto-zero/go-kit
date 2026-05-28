@@ -16,78 +16,116 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-// S3 provides operations on s3 bucket
+const (
+	serviceAccountCAPath    = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	serviceAccountTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+)
+
+// S3 provides operations on an S3-compatible bucket.
+//
+// Deprecated: Consumers should prefer defining a narrow interface in the
+// package that consumes S3 behavior. This broad interface remains for
+// compatibility with existing go-kit users.
 type S3 interface {
-	// PresignGetURL returns a presigned url for get object operation
-	PresignGetURL(ctx context.Context, bucket, key string, expire time.Duration,
-	) (*url.URL, error)
-	// PresignPutURL returns a presigned url for put object operation
-	PresignPutURL(ctx context.Context, bucket, key, contentType, sha256 string,
-		size int, expire time.Duration) (*url.URL, http.Header, error)
-	// GetObject gets an object from bucket
-	GetObject(ctx context.Context, bucket, key string, opt minio.GetObjectOptions) (
-		*minio.Object, error)
-	// PutObject uploads an object to bucket
-	PutObject(ctx context.Context, bucket, key, contentType string, size int,
-		body io.Reader, opts minio.PutObjectOptions) (minio.UploadInfo, error)
-	// CopyObject copies an object from srcKey to destKey
-	CopyObject(ctx context.Context, bucket, srcKey, destKey string) (out minio.UploadInfo,
-		err error)
-	// DeleteObject deletes an object from bucket
+	// PresignGetURL returns a presigned URL for a get-object operation.
+	PresignGetURL(ctx context.Context, bucket, key string, expire time.Duration) (*url.URL, error)
+	// PresignPutURL returns a presigned URL and headers for a put-object operation.
+	PresignPutURL(
+		ctx context.Context,
+		bucket string,
+		key string,
+		contentType string,
+		sha256 string,
+		size int,
+		expire time.Duration,
+	) (*url.URL, http.Header, error)
+	// GetObject gets an object from bucket.
+	GetObject(ctx context.Context, bucket, key string, opts minio.GetObjectOptions) (*minio.Object, error)
+	// PutObject uploads an object to bucket.
+	PutObject(
+		ctx context.Context,
+		bucket string,
+		key string,
+		contentType string,
+		size int,
+		body io.Reader,
+		opts minio.PutObjectOptions,
+	) (minio.UploadInfo, error)
+	// CopyObject copies an object from srcKey to destKey in bucket.
+	CopyObject(ctx context.Context, bucket, srcKey, destKey string) (minio.UploadInfo, error)
+	// DeleteObject deletes an object from bucket.
 	DeleteObject(ctx context.Context, bucket, key string) error
-	// StatObject stats an object in bucket
+	// StatObject stats an object in bucket.
 	StatObject(ctx context.Context, bucket, key string) (minio.ObjectInfo, error)
 }
 
-// MinioS3Impl provides operations on AWS/s3 and minio for implementing S3 interface
+// MinioS3Impl provides operations on AWS S3 and MinIO.
 type MinioS3Impl struct {
 	client *minio.Client
 }
 
-func (m *MinioS3Impl) PresignGetURL(ctx context.Context, bucket, key string, expire time.Duration,
-) (out *url.URL, err error) {
-	if out, err = m.client.PresignedGetObject(ctx, bucket, key, expire, nil); err != nil {
+var _ S3 = (*MinioS3Impl)(nil)
+
+// PresignGetURL returns a presigned URL for a get-object operation.
+func (m *MinioS3Impl) PresignGetURL(ctx context.Context, bucket, key string, expire time.Duration) (*url.URL, error) {
+	out, err := m.client.PresignedGetObject(ctx, bucket, key, expire, nil)
+	if err != nil {
 		return nil, fmt.Errorf("failed to presign get object: %w", err)
 	}
-	return
+	return out, nil
 }
 
-func (m *MinioS3Impl) PresignPutURL(ctx context.Context, bucket, key, contentType,
-	sha256 string, size int, expire time.Duration,
-) (out *url.URL, headers http.Header, err error) {
-	headers = http.Header{
+// PresignPutURL returns a presigned URL and headers for a put-object operation.
+func (m *MinioS3Impl) PresignPutURL(
+	ctx context.Context,
+	bucket string,
+	key string,
+	contentType string,
+	sha256 string,
+	size int,
+	expire time.Duration,
+) (*url.URL, http.Header, error) {
+	headers := http.Header{
 		"Content-Type":          []string{contentType},
 		"Content-Length":        []string{fmt.Sprint(size)},
 		"x-amz-checksum-sha256": []string{sha256},
 	}
-	out, err = m.client.PresignHeader(ctx, http.MethodPut, bucket, key, expire, nil, headers)
+	out, err := m.client.PresignHeader(ctx, http.MethodPut, bucket, key, expire, nil, headers)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to presign put object: %w", err)
 	}
-	return
+	return out, headers, nil
 }
 
-func (m *MinioS3Impl) GetObject(ctx context.Context, bucket, key string, opts minio.GetObjectOptions,
-) (out *minio.Object, err error) {
-	if out, err = m.client.GetObject(ctx, bucket, key, opts); err != nil {
+// GetObject gets an object from bucket.
+func (m *MinioS3Impl) GetObject(ctx context.Context, bucket, key string, opts minio.GetObjectOptions) (*minio.Object, error) {
+	out, err := m.client.GetObject(ctx, bucket, key, opts)
+	if err != nil {
 		return nil, fmt.Errorf("failed to get object: %w", err)
 	}
-	return
+	return out, nil
 }
 
-func (m *MinioS3Impl) PutObject(ctx context.Context, bucket, key, contentType string,
-	size int, body io.Reader, opts minio.PutObjectOptions,
-) (out minio.UploadInfo, err error) {
+// PutObject uploads an object to bucket.
+func (m *MinioS3Impl) PutObject(
+	ctx context.Context,
+	bucket string,
+	key string,
+	contentType string,
+	size int,
+	body io.Reader,
+	opts minio.PutObjectOptions,
+) (minio.UploadInfo, error) {
 	opts.ContentType = contentType
-	if out, err = m.client.PutObject(ctx, bucket, key, body, int64(size), opts); err != nil {
+	out, err := m.client.PutObject(ctx, bucket, key, body, int64(size), opts)
+	if err != nil {
 		return out, fmt.Errorf("failed to put object: %w", err)
 	}
-	return
+	return out, nil
 }
 
-func (m *MinioS3Impl) CopyObject(ctx context.Context, bucket, srcKey, destKey string) (
-	out minio.UploadInfo, err error,
-) {
+// CopyObject copies an object from srcKey to destKey in bucket.
+func (m *MinioS3Impl) CopyObject(ctx context.Context, bucket, srcKey, destKey string) (minio.UploadInfo, error) {
 	copySourceOpts := minio.CopySrcOptions{
 		Bucket: bucket,
 		Object: srcKey,
@@ -96,12 +134,14 @@ func (m *MinioS3Impl) CopyObject(ctx context.Context, bucket, srcKey, destKey st
 		Bucket: bucket,
 		Object: destKey,
 	}
-	if out, err = m.client.CopyObject(ctx, copyDestOpts, copySourceOpts); err != nil {
+	out, err := m.client.CopyObject(ctx, copyDestOpts, copySourceOpts)
+	if err != nil {
 		return out, fmt.Errorf("failed to copy object: %w", err)
 	}
-	return
+	return out, nil
 }
 
+// DeleteObject deletes an object from bucket.
 func (m *MinioS3Impl) DeleteObject(ctx context.Context, bucket, key string) error {
 	if err := m.client.RemoveObject(ctx, bucket, key, minio.RemoveObjectOptions{}); err != nil {
 		return fmt.Errorf("failed to delete object: %w", err)
@@ -109,6 +149,7 @@ func (m *MinioS3Impl) DeleteObject(ctx context.Context, bucket, key string) erro
 	return nil
 }
 
+// StatObject stats an object in bucket.
 func (m *MinioS3Impl) StatObject(ctx context.Context, bucket, key string) (minio.ObjectInfo, error) {
 	info, err := m.client.StatObject(ctx, bucket, key, minio.StatObjectOptions{})
 	if IsNoSuchKeyErr(err) {
@@ -120,7 +161,9 @@ func (m *MinioS3Impl) StatObject(ctx context.Context, bucket, key string) (minio
 	return info, nil
 }
 
-// NewMinioS3Impl creates a new MinioS3Impl
+// NewMinioS3Impl creates a new MinioS3Impl.
+//
+// It returns S3 for backward compatibility with earlier releases.
 func NewMinioS3Impl(endpoint, accessKeyID, secretAccessKey, sessionToken string) (S3, error) {
 	return NewMinioS3ImplWithSTS(endpoint, &credentials.Static{
 		Value: credentials.Value{
@@ -132,7 +175,9 @@ func NewMinioS3Impl(endpoint, accessKeyID, secretAccessKey, sessionToken string)
 	})
 }
 
-// NewMinioS3ImplWithSTS creates a new MinioS3Impl with STSProvider
+// NewMinioS3ImplWithSTS creates a new MinioS3Impl with STSProvider.
+//
+// It returns S3 for backward compatibility with earlier releases.
 func NewMinioS3ImplWithSTS(endpoint string, sts STSProvider) (S3, error) {
 	uri, err := url.Parse(endpoint)
 	if err != nil {
@@ -155,19 +200,19 @@ func NewMinioS3ImplWithSTS(endpoint string, sts STSProvider) (S3, error) {
 	return &MinioS3Impl{client: c}, nil
 }
 
-// DefaultSTSTokenExpirySeconds is the default expiry duration for STS token
+// DefaultSTSTokenExpirySeconds is the default expiry duration for an STS token.
 const DefaultSTSTokenExpirySeconds = 3 * 24 * 60 * 60 // Three days
 
-// STSProvider provides temporary credentials
+// STSProvider provides temporary credentials.
 type STSProvider = credentials.Provider
 
-// WindowedSTSIdentityProvider provides temporary credentials with a windowed expiry
+// WindowedSTSIdentityProvider provides temporary credentials with a windowed expiry.
 type WindowedSTSIdentityProvider struct {
 	Window time.Duration
 	*credentials.STSWebIdentity
 }
 
-// Retrieve returns the credential value
+// Retrieve returns the credential value.
 func (w *WindowedSTSIdentityProvider) Retrieve() (credentials.Value, error) {
 	value, err := w.STSWebIdentity.Retrieve()
 	if err != nil {
@@ -180,18 +225,18 @@ func (w *WindowedSTSIdentityProvider) Retrieve() (credentials.Value, error) {
 // NewMinioSTSProviderImpl creates a new instance of the STSProvider.
 func NewMinioSTSProviderImpl(endpoint string, expirySeconds int, expiryWindow time.Duration,
 ) (STSProvider, error) {
-	// Read kubernetes service account ca certificate file
-	caCert, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	if expirySeconds <= 0 {
+		return nil, fmt.Errorf("sts token expiry seconds must be positive")
+	}
+	caCert, err := os.ReadFile(serviceAccountCAPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read service account ca certificate: %w", err)
 	}
-	// Read kubernetes service account token file
-	token, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	token, err := os.ReadFile(serviceAccountTokenPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read service account token: %w", err)
 	}
 
-	// Create an HttpTransport with the service account token and ca certificate
 	transport, err := minio.DefaultTransport(true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create minio transport: %w", err)
@@ -207,7 +252,6 @@ func NewMinioSTSProviderImpl(endpoint string, expirySeconds int, expiryWindow ti
 		return nil, fmt.Errorf("failed to append kubernetes service account ca certificate")
 	}
 
-	// Create sts credentials
 	credential := &credentials.STSWebIdentity{
 		Client:      &http.Client{Transport: transport},
 		STSEndpoint: endpoint,
@@ -222,7 +266,7 @@ func NewMinioSTSProviderImpl(endpoint string, expirySeconds int, expiryWindow ti
 	return &WindowedSTSIdentityProvider{Window: expiryWindow, STSWebIdentity: credential}, nil
 }
 
-// IsNoSuchKeyErr checks if the error is a NoSuchKey error
+// IsNoSuchKeyErr checks if the error is a NoSuchKey error.
 func IsNoSuchKeyErr(err error) bool {
 	if minioError := minio.ToErrorResponse(err); minioError.Code == "NoSuchKey" {
 		return true
@@ -230,4 +274,5 @@ func IsNoSuchKeyErr(err error) bool {
 	return false
 }
 
+// ErrNoSuchKey reports a missing S3 object.
 var ErrNoSuchKey = errors.New("no such key")

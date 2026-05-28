@@ -3,52 +3,70 @@ package ratelimit
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"strings"
 
 	"github.com/crypto-zero/go-kit/kratos/clientip"
-	"github.com/crypto-zero/go-kit/ratelimit"
-	"github.com/go-kratos/kratos/v2/errors"
+	kratoserrors "github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/middleware"
 	"github.com/go-kratos/kratos/v2/transport"
 )
 
+// Reason is the Kratos error reason emitted when a request is rejected.
+const Reason = "RATELIMIT"
+
+// Metadata keys carried on the Kratos error returned by Server.
 const (
-	defaultKey = "global"
-	reason     = "RATELIMIT"
+	MetadataRemaining  = "remaining"
+	MetadataRetryAfter = "retry_after"
 )
 
 // ErrLimitExceed is returned when a request exceeds its rate limit.
-var ErrLimitExceed = errors.New(429, reason, "service unavailable due to rate limit exceeded")
+var ErrLimitExceed = kratoserrors.New(429, Reason, "service unavailable due to rate limit exceeded")
 
-// Limiter is the behavior required by the middleware.
-type Limiter interface {
-	AllowContext(context.Context, string) (ratelimit.Result, error)
-}
+// ErrStoreUnavailable is returned when the backing store cannot evaluate a
+// limit decision.
+var ErrStoreUnavailable = kratoserrors.New(503, "RATELIMIT_UNAVAILABLE", "service unavailable due to rate limit store unavailable")
+
+// ErrPolicyConflict reports that incompatible options were combined — most
+// commonly passing both WithOperationPolicy and one of WithOperationRules,
+// WithRuleStore, WithUserKeyFunc, or WithClientIPKeyFunc.
+var ErrPolicyConflict = errors.New("ratelimit: WithOperationPolicy conflicts with rule-building options")
+
+// ErrMissingRules reports rule-building options that do not include any
+// operation rules.
+var ErrMissingRules = errors.New("ratelimit: missing operation rules")
 
 // KeyFunc derives a rate-limit key from a request.
 type KeyFunc func(context.Context, any) string
 
-// Option configures server middleware.
+// Option configures Server.
 type Option func(*options)
 
 type options struct {
-	keyFunc KeyFunc
-	err     *errors.Error
-	policy  *OperationPolicy
+	err             *kratoserrors.Error
+	policy          *OperationPolicy
+	store           Store
+	rules           OperationRules
+	clientIPKeyFunc KeyFunc
+	userKeyFunc     KeyFunc
+	storeSet        bool
+	rulesSet        bool
+	clientIPSet     bool
+	userSet         bool
 }
 
-// WithKeyFunc sets how requests are grouped into buckets.
-func WithKeyFunc(fn KeyFunc) Option {
+// WithRuleStore sets the storage backend used to build operation rules.
+func WithRuleStore(store Store) Option {
 	return func(o *options) {
-		if fn != nil {
-			o.keyFunc = fn
-		}
+		o.store = store
+		o.storeSet = true
 	}
 }
 
 // WithError sets the error returned when a request is rejected.
-func WithError(err *errors.Error) Option {
+func WithError(err *kratoserrors.Error) Option {
 	return func(o *options) {
 		if err != nil {
 			o.err = err
@@ -56,63 +74,119 @@ func WithError(err *errors.Error) Option {
 	}
 }
 
-// WithOperationPolicy sets per-operation rate-limit rules.
+// WithOperationPolicy installs a pre-built policy. Mutually exclusive with
+// WithOperationRules / WithRuleStore / WithUserKeyFunc / WithClientIPKeyFunc.
 func WithOperationPolicy(policy *OperationPolicy) Option {
+	return func(o *options) { o.policy = policy }
+}
+
+// WithOperationRules sets per-operation rate-limit rules from external config.
+func WithOperationRules(rules OperationRules) Option {
 	return func(o *options) {
-		o.policy = policy
+		o.rules = rules
+		o.rulesSet = true
 	}
 }
 
-// Server returns a Kratos server middleware using limiter.
-func Server(limiter Limiter, opts ...Option) middleware.Middleware {
-	if limiter == nil {
-		limiter = ratelimit.NewDefault()
+// WithUserKeyFunc sets how user_id key parts are extracted from requests.
+func WithUserKeyFunc(fn KeyFunc) Option {
+	return func(o *options) {
+		o.userKeyFunc = fn
+		o.userSet = true
 	}
-	o := &options{
-		keyFunc: OperationKey,
-		err:     ErrLimitExceed,
+}
+
+// WithClientIPKeyFunc sets how client_ip key parts are extracted from requests.
+func WithClientIPKeyFunc(fn KeyFunc) Option {
+	return func(o *options) {
+		o.clientIPKeyFunc = fn
+		o.clientIPSet = true
 	}
+}
+
+// Server returns a Kratos server middleware that enforces rate limits.
+//
+// Construction errors are returned eagerly so callers fail-fast at startup
+// instead of crashing on the first request. HTTP handlers must set a Kratos
+// operation with http.SetOperation; requests without an operation are treated
+// as unconfigured and are not limited.
+func Server(opts ...Option) (middleware.Middleware, error) {
+	o := &options{err: ErrLimitExceed}
 	for _, opt := range opts {
 		opt(o)
 	}
+	if o.policy != nil {
+		if o.rulesSet || o.storeSet || o.userSet || o.clientIPSet {
+			return nil, ErrPolicyConflict
+		}
+		if err := o.policy.validate(); err != nil {
+			return nil, err
+		}
+	} else if o.rulesSet {
+		if len(o.rules) == 0 {
+			return nil, ErrMissingRules
+		}
+		policy, err := NewOperationPolicy(o.store, o.rules,
+			WithPolicyClientIPKeyFunc(o.clientIPKeyFunc),
+			WithPolicyUserKeyFunc(o.userKeyFunc),
+		)
+		if err != nil {
+			return nil, err
+		}
+		o.policy = policy
+	} else {
+		return nil, ErrMissingRules
+	}
+	policy := o.policy
+	errResp := o.err
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req any) (any, error) {
-			activeLimiter := limiter
-			keyFunc := o.keyFunc
-			if opLimiter, opKeyFunc, ok := o.policy.lookup(OperationKey(ctx, req)); ok {
-				activeLimiter = opLimiter
-				keyFunc = opKeyFunc
-			}
-			key := keyFunc(ctx, req)
-			res, err := activeLimiter.AllowContext(ctx, key)
+			results, err := policy.allow(ctx, OperationKey(ctx, req), req)
 			if err != nil {
-				return nil, err
+				if errors.Is(err, ErrMissingKey) {
+					return nil, errResp.WithMetadata(map[string]string{
+						MetadataRemaining: "0",
+					}).WithCause(err)
+				}
+				return nil, ErrStoreUnavailable.WithCause(err)
 			}
-			if !res.Allowed {
-				return nil, o.err.WithMetadata(retryMetadata(res))
+			if rejected, ok := rejectedResult(results); ok {
+				return nil, errResp.WithMetadata(retryMetadata(rejected))
 			}
 			return handler(ctx, req)
 		}
-	}
+	}, nil
 }
 
-// OperationKey groups requests by Kratos operation.
+func rejectedResult(results []Result) (Result, bool) {
+	var rejected Result
+	var ok bool
+	for _, res := range results {
+		if !res.Allowed && (!ok || res.RetryAfter > rejected.RetryAfter) {
+			rejected = res
+			ok = true
+		}
+	}
+	return rejected, ok
+}
+
+// OperationKey returns the Kratos operation from the server context.
 func OperationKey(ctx context.Context, _ any) string {
-	if tr, ok := transport.FromServerContext(ctx); ok && tr.Operation() != "" {
+	if tr, ok := transport.FromServerContext(ctx); ok {
 		return tr.Operation()
 	}
-	return defaultKey
+	return ""
 }
 
-// ClientIPKey groups requests by client IP address.
+// ClientIPKey returns the client IP from the server context.
 func ClientIPKey(ctx context.Context, _ any) string {
-	if ip := clientip.FromContext(ctx); ip != "" {
-		return ip
-	}
-	return defaultKey
+	return clientip.FromContext(ctx)
 }
 
-// CompositeKey joins multiple key functions into one key.
+// CompositeKey joins multiple key functions into one. If any underlying
+// function returns the empty string, the composite returns the empty string —
+// callers can distinguish "key fully derived" from "at least one dimension
+// missing" without silently collapsing into a narrower bucket.
 func CompositeKey(fns ...KeyFunc) KeyFunc {
 	return func(ctx context.Context, req any) string {
 		parts := make([]string, 0, len(fns))
@@ -120,23 +194,35 @@ func CompositeKey(fns ...KeyFunc) KeyFunc {
 			if fn == nil {
 				continue
 			}
-			if part := fn(ctx, req); part != "" {
-				parts = append(parts, part)
+			part := fn(ctx, req)
+			if part == "" {
+				return ""
 			}
-		}
-		if len(parts) == 0 {
-			return defaultKey
+			parts = append(parts, part)
 		}
 		return strings.Join(parts, ":")
 	}
 }
 
-func retryMetadata(res ratelimit.Result) map[string]string {
+func operationScopedKey(operation string, fn KeyFunc) KeyFunc {
+	return func(ctx context.Context, req any) string {
+		if fn == nil {
+			return operation
+		}
+		key := fn(ctx, req)
+		if key == "" {
+			return ""
+		}
+		return operation + ":" + key
+	}
+}
+
+func retryMetadata(res Result) map[string]string {
 	md := map[string]string{
-		"remaining": strconv.Itoa(res.Remaining),
+		MetadataRemaining: strconv.Itoa(res.Remaining),
 	}
 	if res.RetryAfter > 0 {
-		md["retry_after"] = strconv.FormatFloat(res.RetryAfter.Seconds(), 'f', 3, 64)
+		md[MetadataRetryAfter] = strconv.FormatFloat(res.RetryAfter.Seconds(), 'f', 3, 64)
 	}
 	return md
 }

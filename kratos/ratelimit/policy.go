@@ -1,147 +1,240 @@
 package ratelimit
 
 import (
+	"context"
+	"fmt"
+	"strings"
 	"time"
-
-	"github.com/crypto-zero/go-kit/kratos/internal/protoop"
-	ratelimitv1 "github.com/crypto-zero/go-kit/proto/kit/ratelimit/v1"
-	coreratelimit "github.com/crypto-zero/go-kit/ratelimit"
-	"google.golang.org/protobuf/reflect/protoreflect"
 )
+
+// KeyPart identifies one business dimension used to build a rate-limit key.
+type KeyPart string
+
+const (
+	KeyPartClientIP KeyPart = "client_ip"
+	KeyPartUserID   KeyPart = "user_id"
+)
+
+// ParseKeyPart converts a canonical key-part name into a KeyPart. Callers that
+// load rules from external config can use it to avoid re-implementing the
+// allow-list of supported dimensions.
+func ParseKeyPart(s string) (KeyPart, error) {
+	switch KeyPart(s) {
+	case KeyPartClientIP, KeyPartUserID:
+		return KeyPart(s), nil
+	default:
+		return "", fmt.Errorf("unsupported key part %q", s)
+	}
+}
+
+// RuleConfig provides the runtime limit for one operation rule.
+type RuleConfig struct {
+	Config   Config
+	KeyParts []KeyPart
+}
+
+// OperationRules maps Kratos operation names to their runtime limit rules.
+type OperationRules map[string][]RuleConfig
 
 // OperationPolicy selects rate-limit behavior for Kratos operations.
 type OperationPolicy struct {
-	operations map[string]operationLimit
-	store      coreratelimit.Store
+	operations      map[string][]operationLimit
+	store           Store
+	now             func() time.Time
+	clientIPKeyFunc KeyFunc
+	userKeyFunc     KeyFunc
 }
 
 type operationLimit struct {
-	limiter Limiter
 	keyFunc KeyFunc
-	config  coreratelimit.Config
+	limit   Limit
 }
 
 // OperationPolicyOption configures an OperationPolicy.
 type OperationPolicyOption func(*OperationPolicy)
 
-// NewOperationPolicy constructs a policy from proto descriptors and manual
-// operation rules.
-func NewOperationPolicy(opts ...OperationPolicyOption) *OperationPolicy {
-	p := &OperationPolicy{operations: make(map[string]operationLimit)}
+// WithPolicyUserKeyFunc sets how operation policies extract the business user id.
+func WithPolicyUserKeyFunc(fn KeyFunc) OperationPolicyOption {
+	return func(p *OperationPolicy) {
+		p.userKeyFunc = fn
+	}
+}
+
+// WithPolicyClientIPKeyFunc sets how operation policies extract the client IP.
+func WithPolicyClientIPKeyFunc(fn KeyFunc) OperationPolicyOption {
+	return func(p *OperationPolicy) {
+		p.clientIPKeyFunc = fn
+	}
+}
+
+// WithPolicyNow overrides the clock used to stamp Store calls. Mostly useful in tests.
+func WithPolicyNow(now func() time.Time) OperationPolicyOption {
+	return func(p *OperationPolicy) {
+		if now != nil {
+			p.now = now
+		}
+	}
+}
+
+// NewOperationPolicy constructs a policy from operation rules. All construction
+// errors are returned eagerly; the resulting policy never silently disables
+// limiting at runtime.
+func NewOperationPolicy(
+	store Store,
+	rules OperationRules,
+	opts ...OperationPolicyOption,
+) (*OperationPolicy, error) {
+	if store == nil {
+		return nil, ErrMissingStore
+	}
+	if len(rules) == 0 {
+		return nil, ErrMissingRules
+	}
+	p := &OperationPolicy{
+		operations: make(map[string][]operationLimit, len(rules)),
+		store:      store,
+		now:        time.Now,
+	}
 	for _, opt := range opts {
 		opt(p)
 	}
-	return p
-}
-
-// WithStore sets the storage backend used by operation-specific limiters.
-func WithStore(store coreratelimit.Store) OperationPolicyOption {
-	return func(p *OperationPolicy) {
-		if store != nil {
-			p.store = store
-			for operation, rule := range p.operations {
-				p.operations[operation] = p.build(rule.config, rule.keyFunc)
+	for operation, configs := range rules {
+		if operation == "" {
+			return nil, fmt.Errorf("ratelimit operation must not be empty")
+		}
+		if len(configs) == 0 {
+			return nil, fmt.Errorf("%s: ratelimit rules must not be empty", operation)
+		}
+		seen := make(map[string]struct{}, len(configs))
+		for _, cfg := range configs {
+			sig := keyPartsSignature(cfg.KeyParts)
+			label := ruleLabel(operation, sig)
+			if err := validateKeyParts(cfg.KeyParts); err != nil {
+				return nil, fmt.Errorf("%s: %w", label, err)
 			}
+			if err := cfg.Config.Validate(); err != nil {
+				return nil, fmt.Errorf("%s: %w", label, err)
+			}
+			if _, dup := seen[sig]; dup {
+				return nil, fmt.Errorf("%s: duplicate ratelimit rule %s", operation, sig)
+			}
+			seen[sig] = struct{}{}
+
+			keyFunc, err := p.keyFuncFromParts(operation, cfg.KeyParts)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", operation, err)
+			}
+			p.operations[operation] = append(p.operations[operation], operationLimit{
+				keyFunc: keyFunc,
+				limit:   cfg.Config,
+			})
 		}
 	}
+	return p, nil
 }
 
-// WithOperation registers a rate limit for one Kratos operation.
-func WithOperation(operation string, cfg coreratelimit.Config, keyFunc KeyFunc) OperationPolicyOption {
-	return func(p *OperationPolicy) {
-		p.register(operation, cfg, keyFunc)
-	}
-}
-
-// WithRateLimitFromProtoFiles scans file descriptors for methods tagged with
-// `(kit.ratelimit.v1.rate_limit)`.
-func WithRateLimitFromProtoFiles(files ...protoreflect.FileDescriptor) OperationPolicyOption {
-	return func(p *OperationPolicy) {
-		for _, fd := range files {
-			registerRateLimitsFromFile(p, fd)
-		}
-	}
-}
-
-func (p *OperationPolicy) lookup(operation string) (Limiter, KeyFunc, bool) {
+// allow runs every rule for operation in one atomic Store call and returns the
+// per-rule Results. It returns (nil, nil) when no rule matches.
+func (p *OperationPolicy) allow(ctx context.Context, operation string, req any) ([]Result, error) {
 	if p == nil {
-		return nil, nil, false
+		return nil, nil
 	}
-	rule, ok := p.operations[operation]
-	if !ok {
-		return nil, nil, false
+	rules := p.operations[operation]
+	if len(rules) == 0 {
+		return nil, nil
 	}
-	return rule.limiter, rule.keyFunc, true
-}
-
-func (p *OperationPolicy) register(operation string, cfg coreratelimit.Config, keyFunc KeyFunc) {
-	if operation == "" || keyFunc == nil {
-		return
-	}
-	rule := p.build(cfg, keyFunc)
-	if rule.limiter == nil {
-		return
-	}
-	p.operations[operation] = rule
-}
-
-func (p *OperationPolicy) build(cfg coreratelimit.Config, keyFunc KeyFunc) operationLimit {
-	opts := []coreratelimit.Option(nil)
-	if p.store != nil {
-		opts = append(opts, coreratelimit.WithStore(p.store))
-	}
-	limiter, err := coreratelimit.New(cfg, opts...)
-	if err != nil {
-		return operationLimit{}
-	}
-	return operationLimit{
-		limiter: limiter,
-		keyFunc: keyFunc,
-		config:  cfg,
-	}
-}
-
-func registerRateLimitsFromFile(p *OperationPolicy, fd protoreflect.FileDescriptor) {
-	protoop.WalkMethods([]protoreflect.FileDescriptor{fd}, func(m protoreflect.MethodDescriptor) {
-		rule, ok := methodRateLimit(m)
-		if !ok {
-			return
+	keys := make([]string, len(rules))
+	limits := make([]Limit, len(rules))
+	for i, rule := range rules {
+		key := rule.keyFunc(ctx, req)
+		if key == "" {
+			return nil, ErrMissingKey
 		}
-		p.register(protoop.OperationName(m), configFromProto(rule), keyFuncFromProto(rule.GetKey()))
-	})
-}
-
-func methodRateLimit(m protoreflect.MethodDescriptor) (*ratelimitv1.RateLimit, bool) {
-	v, ok := protoop.Extension(m, ratelimitv1.E_RateLimit)
-	if !ok {
-		return nil, false
+		keys[i] = key
+		limits[i] = rule.limit
 	}
-	rule, ok := v.(*ratelimitv1.RateLimit)
-	return rule, ok && rule != nil
+	return p.store.TakeMany(ctx, keys, p.now(), limits, 1)
 }
 
-func configFromProto(rule *ratelimitv1.RateLimit) coreratelimit.Config {
-	return coreratelimit.Config{
-		Rate:  int(rule.GetRate()),
-		Per:   durationFromProto(rule),
-		Burst: int(rule.GetBurst()),
+func (p *OperationPolicy) validate() error {
+	// NewOperationPolicy already performs full validation. This method catches
+	// zero-value policies passed through WithOperationPolicy.
+	if p == nil || p.store == nil || len(p.operations) == 0 {
+		return ErrMissingRules
 	}
+	return nil
 }
 
-func durationFromProto(rule *ratelimitv1.RateLimit) time.Duration {
-	if rule.GetPer() == nil {
-		return 0
+func (p *OperationPolicy) keyFuncFromParts(operation string, parts []KeyPart) (KeyFunc, error) {
+	fns := make([]KeyFunc, 0, len(parts))
+	for _, part := range parts {
+		fn, err := p.keyFuncForPart(part)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", keyPartsSignature(parts), err)
+		}
+		fns = append(fns, namedKeyPart(part, fn))
 	}
-	return rule.GetPer().AsDuration()
+	return operationScopedKey(operation, CompositeKey(fns...)), nil
 }
 
-func keyFuncFromProto(key ratelimitv1.Key) KeyFunc {
-	switch key {
-	case ratelimitv1.Key_KEY_CLIENT_IP:
-		return ClientIPKey
-	case ratelimitv1.Key_KEY_OPERATION_CLIENT_IP:
-		return CompositeKey(OperationKey, ClientIPKey)
+func (p *OperationPolicy) keyFuncForPart(part KeyPart) (KeyFunc, error) {
+	switch part {
+	case KeyPartClientIP:
+		if p.clientIPKeyFunc == nil {
+			return nil, fmt.Errorf("client IP key function is required")
+		}
+		return p.clientIPKeyFunc, nil
+	case KeyPartUserID:
+		if p.userKeyFunc == nil {
+			return nil, fmt.Errorf("user key function is required")
+		}
+		return p.userKeyFunc, nil
 	default:
-		return OperationKey
+		return nil, fmt.Errorf("unsupported key part %s", part)
 	}
+}
+
+func namedKeyPart(part KeyPart, fn KeyFunc) KeyFunc {
+	return func(ctx context.Context, req any) string {
+		value := fn(ctx, req)
+		if value == "" {
+			return ""
+		}
+		return string(part) + ":" + escapeKeyPartValue(value)
+	}
+}
+
+var keyPartEscaper = strings.NewReplacer("%", "%25", ":", "%3A")
+
+func escapeKeyPartValue(value string) string {
+	return keyPartEscaper.Replace(value)
+}
+
+func validateKeyParts(parts []KeyPart) error {
+	if len(parts) == 0 {
+		return fmt.Errorf("key_parts must not be empty")
+	}
+	for _, part := range parts {
+		switch part {
+		case KeyPartClientIP, KeyPartUserID:
+		default:
+			return fmt.Errorf("unsupported key part %s", part)
+		}
+	}
+	return nil
+}
+
+func keyPartsSignature(parts []KeyPart) string {
+	names := make([]string, 0, len(parts))
+	for _, part := range parts {
+		names = append(names, string(part))
+	}
+	return strings.Join(names, "+")
+}
+
+func ruleLabel(operation, sig string) string {
+	if sig == "" {
+		return operation
+	}
+	return operation + " " + sig
 }

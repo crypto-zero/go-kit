@@ -10,7 +10,8 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// ent not support for generic types, so we need to declare wrapper types for each type
+// Ent does not support generic field types, so concrete wrapper types are
+// declared for each supported database value.
 type (
 	// CIDRWrapper is a wrapper for pgx standard sql library types.
 	CIDRWrapper StdWrapper[netip.Prefix]
@@ -32,23 +33,15 @@ type (
 )
 
 // Value implements the database/sql/driver Valuer interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w CIDRWrapper) Value() (driver.Value, error) { return StdWrapper[netip.Prefix](w).Value() }
 
 // Scan implements the database/sql Scanner interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w *CIDRWrapper) Scan(src any) error { return (*StdWrapper[netip.Prefix])(w).Scan(src) }
 
 // Value implements the database/sql/driver Valuer interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w DurationWrapper) Value() (driver.Value, error) { return StdWrapper[time.Duration](w).Value() }
 
 // Scan implements the database/sql Scanner interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w *DurationWrapper) Scan(src any) error {
 	return (*StdWrapper[time.Duration])(w).Scan(src)
 }
@@ -57,52 +50,36 @@ func (w *DurationWrapper) Scan(src any) error {
 func NewIntsWrapper() IntsWrapper { return IntsWrapper{V: make([]int, 0)} }
 
 // Value implements the database/sql/driver Valuer interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w IntsWrapper) Value() (driver.Value, error) { return SliceWrapper[int](w).Value() }
 
 // Scan implements the database/sql Scanner interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w *IntsWrapper) Scan(src any) error { return (*SliceWrapper[int])(w).Scan(src) }
 
 // NewFloatsWrapper returns a new FloatsWrapper.
 func NewFloatsWrapper() FloatsWrapper { return FloatsWrapper{V: make([]float64, 0)} }
 
 // Value implements the database/sql/driver Valuer interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w FloatsWrapper) Value() (driver.Value, error) { return SliceWrapper[float64](w).Value() }
 
 // Scan implements the database/sql Scanner interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w *FloatsWrapper) Scan(src any) error { return (*SliceWrapper[float64])(w).Scan(src) }
 
 // NewStringsWrapper returns a new StringsWrapper.
 func NewStringsWrapper() StringsWrapper { return StringsWrapper{V: make([]string, 0)} }
 
 // Value implements the database/sql/driver Valuer interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w StringsWrapper) Value() (driver.Value, error) { return SliceWrapper[string](w).Value() }
 
 // Scan implements the database/sql Scanner interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w *StringsWrapper) Scan(src any) error { return (*SliceWrapper[string])(w).Scan(src) }
 
 // NewCIDRsWrapper returns a new CIDRsWrapper.
 func NewCIDRsWrapper() CIDRsWrapper { return CIDRsWrapper{V: make([]netip.Prefix, 0)} }
 
 // Value implements the database/sql/driver Valuer interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w CIDRsWrapper) Value() (driver.Value, error) { return SliceWrapper[netip.Prefix](w).Value() }
 
 // Scan implements the database/sql Scanner interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w *CIDRsWrapper) Scan(src any) error { return (*SliceWrapper[netip.Prefix])(w).Scan(src) }
 
 // NewDurationsWrapper returns a new DurationsWrapper.
@@ -111,15 +88,11 @@ func NewDurationsWrapper() DurationsWrapper {
 }
 
 // Value implements the database/sql/driver Valuer interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w DurationsWrapper) Value() (driver.Value, error) {
 	return SliceWrapper[time.Duration](w).Value()
 }
 
 // Scan implements the database/sql Scanner interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w *DurationsWrapper) Scan(src any) error {
 	return (*SliceWrapper[time.Duration])(w).Scan(src)
 }
@@ -130,15 +103,11 @@ func NewTimestampsWrapper() TimestampsWrapper {
 }
 
 // Value implements the database/sql/driver Valuer interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w TimestampsWrapper) Value() (driver.Value, error) {
 	return SliceWrapper[time.Time](w).Value()
 }
 
 // Scan implements the database/sql Scanner interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w *TimestampsWrapper) Scan(src any) error {
 	return (*SliceWrapper[time.Time])(w).Scan(src)
 }
@@ -156,15 +125,11 @@ type StdWrapper[T any] struct {
 }
 
 // Value implements the database/sql/driver Valuer interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w StdWrapper[T]) Value() (driver.Value, error) {
 	return w.V, nil
 }
 
 // Scan implements the database/sql Scanner interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w *StdWrapper[T]) Scan(src any) (err error) {
 	return typeMapScan(src, &w.V)
 }
@@ -175,10 +140,8 @@ type SliceWrapper[T any] struct {
 }
 
 // Value implements the database/sql/driver Valuer interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w SliceWrapper[T]) Value() (driver.Value, error) {
-	// pgx treats nil slice as NULL, but we want to treat it as an empty array
+	// pgx treats nil slices as NULL, but callers expect an empty array.
 	if w.V == nil {
 		return make([]T, 0), nil
 	}
@@ -186,8 +149,6 @@ func (w SliceWrapper[T]) Value() (driver.Value, error) {
 }
 
 // Scan implements the database/sql Scanner interface.
-//
-//goland:noinspection GoMixedReceiverTypes
 func (w *SliceWrapper[T]) Scan(src any) (err error) {
 	return typeMapScan(src, &w.V)
 }
@@ -220,7 +181,7 @@ func guessingScan[T any](src any) (value T, err error) {
 		case []byte:
 			bufSrc = src
 		default:
-			bufSrc = []byte(fmt.Sprint(bufSrc))
+			bufSrc = []byte(fmt.Sprint(src))
 		}
 	}
 

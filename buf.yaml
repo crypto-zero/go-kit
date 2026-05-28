@@ -1,5 +1,7 @@
 version: v2
-name: buf.build/crypto-zero/go-kit
+modules:
+  - path: proto
+    name: buf.build/crypto-zero/go-kit
 deps:
   - buf.build/googleapis/googleapis:main
 lint:

@@ -3,22 +3,22 @@ package otel
 import "go.opentelemetry.io/otel/attribute"
 
 const (
-	// SigNozSystemDBKey span type database call
+	// SigNozSystemDBKey is the span attribute key for database calls.
 	// https://signoz.io/docs/userguide/metrics/
 	SigNozSystemDBKey = attribute.Key("db.system")
 )
 
-// SigNozSystemDB return db system attribute
+// SigNozSystemDB returns a database system attribute.
 func SigNozSystemDB(system string) attribute.KeyValue {
 	return SigNozSystemDBKey.String(system)
 }
 
-// SigNozSystemDBPostgres return db system attribute for postgres
+// SigNozSystemDBPostgres returns a database system attribute for PostgreSQL.
 func SigNozSystemDBPostgres() attribute.KeyValue {
 	return SigNozSystemDB("postgresql")
 }
 
-// SigNozSystemDBNats return db system attribute for nats
+// SigNozSystemDBNats returns a database system attribute for NATS.
 func SigNozSystemDBNats() attribute.KeyValue {
 	return SigNozSystemDB("nats")
 }

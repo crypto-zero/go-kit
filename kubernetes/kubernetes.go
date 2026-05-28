@@ -1,18 +1,15 @@
 package kubernetes
 
 import (
-	"io"
 	"os"
 	"strings"
 )
 
+const namespacePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+
 // GetCurrentNamespace returns the current namespace in the kubernetes cluster.
 func GetCurrentNamespace() (namespace string) {
-	namespaceFile, err := os.Open("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-	if err != nil {
-		return ""
-	}
-	d, err := io.ReadAll(namespaceFile)
+	d, err := os.ReadFile(namespacePath)
 	if err != nil {
 		return ""
 	}

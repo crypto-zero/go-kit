@@ -18,9 +18,10 @@ import (
 
 type PBError = pberrors.Error
 
+// Error is the concrete error type used by this package.
 type Error PBError
 
-// Error return text message and http status code.
+// Error returns a text representation of e.
 func (e *Error) Error() string {
 	return fmt.Sprintf("error: code = %d reason = %s message = %s", e.Status, e.Info.Reason, e.Message)
 }
@@ -33,7 +34,7 @@ func (e *Error) Is(err error) bool {
 	return false
 }
 
-// GRPCStatus returns the Status represented by se.
+// GRPCStatus returns the gRPC status represented by e.
 func (e *Error) GRPCStatus() *status.Status {
 	s := &spb.Status{Code: int32(ToGRPCCode(int(e.Status))), Message: e.Message}
 	if codes.Code(s.Code) == codes.OK {
@@ -48,13 +49,13 @@ func (e *Error) GRPCStatus() *status.Status {
 	return status.FromProto(s)
 }
 
-// MarshalJSON marshals se to JSON.
+// MarshalJSON marshals e to JSON.
 func (e *Error) MarshalJSON() ([]byte, error) {
 	pbErr := (*PBError)(e)
 	return protojson.Marshal(pbErr)
 }
 
-// Clone returns a deep copy of se.
+// Clone returns a deep copy of e.
 func (e *Error) Clone() *Error {
 	if e == nil {
 		return nil
@@ -64,14 +65,17 @@ func (e *Error) Clone() *Error {
 	return (*Error)(pbErr)
 }
 
-// SetMetadata set metadata for error info.
+// SetMetadata returns a copy of e with an ErrorInfo metadata value set.
 func (e *Error) SetMetadata(key, value string) *Error {
 	copied := e.Clone()
+	if copied.Info.Metadata == nil {
+		copied.Info.Metadata = make(map[string]string)
+	}
 	copied.Info.Metadata[key] = value
 	return copied
 }
 
-// SetCause set cause for error info.
+// SetCause returns a copy of e with err recorded as ErrorInfo metadata.
 func (e *Error) SetCause(err error) *Error {
 	if err == nil {
 		return e
@@ -79,7 +83,7 @@ func (e *Error) SetCause(err error) *Error {
 	return e.SetMetadata("cause", err.Error())
 }
 
-// SetDomainAndCode set domain and code for info without clone.
+// SetDomainAndCode sets the ErrorInfo domain and numeric code in place.
 func (e *Error) SetDomainAndCode(domain string, code int) *Error {
 	if e.Info.Metadata == nil {
 		e.Info.Metadata = make(map[string]string)
@@ -96,7 +100,7 @@ const (
 	UnknownReason = ""
 )
 
-// New returns an error object for the code, message.
+// New returns an error object for code, reason, and message.
 func New(code int, reason, message string) *Error {
 	return &Error{
 		Status:  int32(code),
@@ -105,17 +109,17 @@ func New(code int, reason, message string) *Error {
 	}
 }
 
-// Newf New(code fmt.Sprintf(format, a...))
+// Newf returns an error object with a formatted message.
 func Newf(code int, reason, format string, a ...any) *Error {
 	return New(code, reason, fmt.Sprintf(format, a...))
 }
 
-// Errorf returns an error object for the code, message and error info.
+// Errorf returns an error object for code, reason, and a formatted message.
 func Errorf(code int, reason, format string, a ...any) error {
 	return New(code, reason, fmt.Sprintf(format, a...))
 }
 
-// Code returns the http code for an error.
+// Code returns the HTTP status code for an error.
 // It supports wrapped errors.
 func Code(err error) int {
 	if err == nil {

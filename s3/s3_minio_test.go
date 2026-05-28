@@ -33,6 +33,13 @@ func TestMinio(t *testing.T) {
 	})
 }
 
+func TestNewMinioSTSProviderImplRejectsMissingExpiry(t *testing.T) {
+	_, err := NewMinioSTSProviderImpl("https://sts.example.com", 0, time.Minute)
+	if err == nil {
+		t.Fatal("NewMinioSTSProviderImpl error = nil, want error")
+	}
+}
+
 type TestMinioSuite struct {
 	suite.Suite
 
