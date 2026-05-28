@@ -84,7 +84,7 @@ func NewTraceProvider(c *TraceProviderConfig) (
 		semconv.K8SNamespaceName(kubernetes.GetCurrentNamespace()),
 	}
 	if resourceInEnv := os.Getenv("OTEL_RESOURCE_ATTRIBUTES"); resourceInEnv != "" {
-		for _, attr := range strings.Split(resourceInEnv, ",") {
+		for attr := range strings.SplitSeq(resourceInEnv, ",") {
 			parts := strings.Split(attr, "=")
 			if len(parts) == 2 {
 				attrs = append(attrs, attribute.String(parts[0], parts[1]))

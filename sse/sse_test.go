@@ -226,7 +226,7 @@ func TestStream_Heartbeat(t *testing.T) {
 	// Concurrent writes: ensure mutex prevents interleaved frames.
 	done := make(chan struct{})
 	go func() {
-		for i := 0; i < 20; i++ {
+		for range 20 {
 			_ = s.Write("token")
 			time.Sleep(time.Millisecond)
 		}

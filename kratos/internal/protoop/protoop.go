@@ -12,9 +12,9 @@ import (
 func WalkMethods(files []protoreflect.FileDescriptor, fn func(protoreflect.MethodDescriptor)) {
 	for _, fd := range files {
 		services := fd.Services()
-		for i := 0; i < services.Len(); i++ {
+		for i := range services.Len() {
 			methods := services.Get(i).Methods()
-			for j := 0; j < methods.Len(); j++ {
+			for j := range methods.Len() {
 				fn(methods.Get(j))
 			}
 		}

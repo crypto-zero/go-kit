@@ -186,7 +186,7 @@ func parseResults(values []any, want int) ([]ratelimit.Result, error) {
 		return nil, fmt.Errorf("%w: got %d values, want %d", ErrInvalidScriptResult, len(values), want*scriptResultWidth)
 	}
 	results := make([]ratelimit.Result, want)
-	for i := 0; i < want; i++ {
+	for i := range want {
 		res, err := parseResult(values[i*scriptResultWidth : (i+1)*scriptResultWidth])
 		if err != nil {
 			return nil, err
@@ -239,14 +239,7 @@ func int64Value(v any) (int64, error) {
 func ttl(limit ratelimit.Limit) int64 {
 	perMs := durationMillis(limit.Per)
 	refillFullMs := int64(math.Ceil(float64(limit.Burst) * float64(perMs) / float64(limit.Rate)))
-	expireMillis := 2 * perMs
-	if refillFullMs > expireMillis {
-		expireMillis = refillFullMs
-	}
-	if expireMillis < minBucketTTLMillis {
-		expireMillis = minBucketTTLMillis
-	}
-	return expireMillis
+	return max(max(2*perMs, refillFullMs), minBucketTTLMillis)
 }
 
 func durationMillis(d time.Duration) int64 {

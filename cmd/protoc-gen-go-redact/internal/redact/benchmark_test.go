@@ -22,8 +22,7 @@ func BenchmarkRedact_SimpleMessage(b *testing.B) {
 		Age:      30,
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = user.Redact()
 	}
 }
@@ -49,8 +48,7 @@ func BenchmarkRedact_NestedMessage(b *testing.B) {
 		},
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = account.Redact()
 	}
 }
@@ -69,8 +67,7 @@ func BenchmarkRedact_DeepNested(b *testing.B) {
 		},
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = level1.Redact()
 	}
 }
@@ -110,15 +107,14 @@ func BenchmarkRedact_AllScalarTypes(b *testing.B) {
 		RedactBytes:        []byte("secret-bytes"),
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = scalar.Redact()
 	}
 }
 
 func BenchmarkRedact_RepeatedMessages(b *testing.B) {
 	users := make([]*testdata.User, 100)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		users[i] = &testdata.User{
 			Id:       "user-" + string(rune(i)),
 			Name:     "User " + string(rune(i)),
@@ -131,20 +127,19 @@ func BenchmarkRedact_RepeatedMessages(b *testing.B) {
 		Users: users,
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = repeated.Redact()
 	}
 }
 
 func BenchmarkRedact_MapWithStringKey(b *testing.B) {
 	stringMap := make(map[string]string, 100)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		stringMap["key"+string(rune(i))] = "value" + string(rune(i))
 	}
 
 	userMap := make(map[string]*testdata.User, 10)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		userMap["user"+string(rune(i))] = &testdata.User{
 			Id:    "id-" + string(rune(i)),
 			Email: "email@test.com",
@@ -156,8 +151,7 @@ func BenchmarkRedact_MapWithStringKey(b *testing.B) {
 		UserMap:   userMap,
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = m.Redact()
 	}
 }
@@ -195,8 +189,7 @@ func BenchmarkRedact_ComplexMessage(b *testing.B) {
 		SecretExtra:  &testdata.ComplexMessage_SecretNote{SecretNote: "secret note"},
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = complex.Redact()
 	}
 }
@@ -204,8 +197,7 @@ func BenchmarkRedact_ComplexMessage(b *testing.B) {
 func BenchmarkRedact_NilMessage(b *testing.B) {
 	var user *testdata.User
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = user.Redact()
 	}
 }

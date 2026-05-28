@@ -85,23 +85,23 @@ func testCodeGeneratorRequest(t *testing.T) *pluginpb.CodeGeneratorRequest {
 	return &pluginpb.CodeGeneratorRequest{
 		FileToGenerate: []string{"test/v1/live.proto"},
 		ProtoFile: []*descriptorpb.FileDescriptorProto{{
-			Syntax:  proto.String("proto3"),
-			Name:    proto.String("test/v1/live.proto"),
-			Package: proto.String("test.v1"),
+			Syntax:  new("proto3"),
+			Name:    new("test/v1/live.proto"),
+			Package: new("test.v1"),
 			Options: &descriptorpb.FileOptions{
-				GoPackage: proto.String("example.com/test/v1;testv1"),
+				GoPackage: new("example.com/test/v1;testv1"),
 			},
 			MessageType: []*descriptorpb.DescriptorProto{{
-				Name: proto.String("WatchRequest"),
+				Name: new("WatchRequest"),
 			}, {
-				Name: proto.String("WatchResponse"),
+				Name: new("WatchResponse"),
 			}},
 			Service: []*descriptorpb.ServiceDescriptorProto{{
-				Name: proto.String("LiveService"),
+				Name: new("LiveService"),
 				Method: []*descriptorpb.MethodDescriptorProto{{
-					Name:       proto.String("Watch"),
-					InputType:  proto.String(".test.v1.WatchRequest"),
-					OutputType: proto.String(".test.v1.WatchResponse"),
+					Name:       new("Watch"),
+					InputType:  new(".test.v1.WatchRequest"),
+					OutputType: new(".test.v1.WatchResponse"),
 					Options:    opts,
 				}},
 			}},

@@ -13,30 +13,30 @@ func TestOperationPolicyRegistersPublicProtoMethods(t *testing.T) {
 	publicOpts := &descriptorpb.MethodOptions{}
 	proto.SetExtension(publicOpts, authv1.E_Public, true)
 	fd, err := protodesc.NewFile(&descriptorpb.FileDescriptorProto{
-		Syntax:  proto.String("proto3"),
-		Name:    proto.String("test/auth/v1/service.proto"),
-		Package: proto.String("test.auth.v1"),
+		Syntax:  new("proto3"),
+		Name:    new("test/auth/v1/service.proto"),
+		Package: new("test.auth.v1"),
 		Service: []*descriptorpb.ServiceDescriptorProto{{
-			Name: proto.String("AuthService"),
+			Name: new("AuthService"),
 			Method: []*descriptorpb.MethodDescriptorProto{
 				{
-					Name:       proto.String("Login"),
-					InputType:  proto.String(".test.auth.v1.LoginRequest"),
-					OutputType: proto.String(".test.auth.v1.LoginResponse"),
+					Name:       new("Login"),
+					InputType:  new(".test.auth.v1.LoginRequest"),
+					OutputType: new(".test.auth.v1.LoginResponse"),
 					Options:    publicOpts,
 				},
 				{
-					Name:       proto.String("Profile"),
-					InputType:  proto.String(".test.auth.v1.ProfileRequest"),
-					OutputType: proto.String(".test.auth.v1.ProfileResponse"),
+					Name:       new("Profile"),
+					InputType:  new(".test.auth.v1.ProfileRequest"),
+					OutputType: new(".test.auth.v1.ProfileResponse"),
 				},
 			},
 		}},
 		MessageType: []*descriptorpb.DescriptorProto{
-			{Name: proto.String("LoginRequest")},
-			{Name: proto.String("LoginResponse")},
-			{Name: proto.String("ProfileRequest")},
-			{Name: proto.String("ProfileResponse")},
+			{Name: new("LoginRequest")},
+			{Name: new("LoginResponse")},
+			{Name: new("ProfileRequest")},
+			{Name: new("ProfileResponse")},
 		},
 	}, nil)
 	if err != nil {

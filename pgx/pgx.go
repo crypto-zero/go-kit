@@ -181,7 +181,7 @@ func guessingScan[T any](src any) (value T, err error) {
 		case []byte:
 			bufSrc = src
 		default:
-			bufSrc = []byte(fmt.Sprint(src))
+			bufSrc = fmt.Append(nil, src)
 		}
 	}
 

@@ -19,8 +19,7 @@ func ProcessOrdering(orderBy string, fieldMap map[string]string, defaultOrdering
 		return defaultOrdering
 	}
 
-	orderByTerms := strings.Split(orderBy, ",")
-	for _, term := range orderByTerms {
+	for term := range strings.SplitSeq(orderBy, ",") {
 		if term == "" {
 			continue
 		}

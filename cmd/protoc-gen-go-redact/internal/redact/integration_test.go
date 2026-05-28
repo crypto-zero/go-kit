@@ -639,7 +639,7 @@ func TestSpecialCharacters_Redact(t *testing.T) {
 	t.Logf("SpecialCharacters.Redact(): %s", result)
 
 	// Verify the output is valid JSON
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 		t.Errorf("Result should be valid JSON: %v", err)
 	}
@@ -853,7 +853,7 @@ func TestCustomMaskTypes_AllFields(t *testing.T) {
 	assertContains(t, result, "publicStatus", "2")
 
 	// Verify it's valid JSON
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 		t.Errorf("Result should be valid JSON: %v", err)
 	}
@@ -879,7 +879,7 @@ func TestAllMessages_ValidJSON(t *testing.T) {
 
 	for i, msg := range messages {
 		result := msg.Redact()
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal([]byte(result), &parsed); err != nil {
 			t.Errorf("Message %d produced invalid JSON: %v\nResult: %s", i, err, result)
 		}

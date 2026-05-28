@@ -26,7 +26,7 @@ func GeneratePassword(size int, accept func(byte) bool) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("read random bytes: %w", err)
 		}
-		for idx := 0; idx < n; idx++ {
+		for idx := range n {
 			if accept(buf[idx]) && len(password) < size {
 				password = append(password, buf[idx])
 			}

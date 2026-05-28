@@ -222,7 +222,7 @@ func TestServerUsesOperationRules(t *testing.T) {
 	if _, err := wrapped(fastCtx, nil); !errors.Is(err, ErrLimitExceed) {
 		t.Fatalf("fast second request error = %v, want ErrLimitExceed from operation policy", err)
 	}
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if _, err := wrapped(slowCtx, nil); err != nil {
 			t.Fatalf("slow request %d error = %v, want default limiter", i+1, err)
 		}
@@ -328,13 +328,13 @@ func TestServerMultiRuleConsumptionIsAtomic(t *testing.T) {
 	if _, err := user1(ctx, nil); err != nil {
 		t.Fatalf("first request error = %v, want nil", err)
 	}
-	for i := 0; i < 200; i++ {
+	for i := range 200 {
 		if _, err := user1(ctx, nil); !errors.Is(err, ErrLimitExceed) {
 			t.Fatalf("rejected request %d error = %v, want ErrLimitExceed", i+2, err)
 		}
 	}
 
-	for i := 0; i < 99; i++ {
+	for i := range 99 {
 		user := buildServer(fmt.Sprintf("user-%d", i+2))
 		if _, err := user(ctx, nil); err != nil {
 			t.Fatalf("user-2 request %d error = %v, want IP bucket still has 99 tokens", i+1, err)
