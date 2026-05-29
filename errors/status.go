@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	// HttpCodeClientClosed is non-standard http status code,
-	// which defined by nginx.
+	// HttpCodeClientClosed is the non-standard HTTP status code used by nginx
+	// when a client closes the request.
 	// https://httpstatus.in/499/
 	HttpCodeClientClosed = 499
 )
@@ -24,7 +24,7 @@ type Converter interface {
 
 type statusConverter struct{}
 
-// DefaultConverter default converter.
+// DefaultConverter is the default status converter.
 var DefaultConverter Converter = statusConverter{}
 
 // ToGRPCCode converts an HTTP error code into the corresponding gRPC response status.

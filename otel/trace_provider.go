@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -17,7 +18,15 @@ import (
 	"github.com/crypto-zero/go-kit/kubernetes"
 )
 
-// TraceProviderConfig is an open telemetry trace provider config.
+const traceShutdownTimeout = 5 * time.Second
+
+// TraceProvider is an open telemetry trace service.
+//
+// Deprecated: This broad compatibility type is an alias-shaped service token.
+// Consumers should depend on the behavior they need instead of this type.
+type TraceProvider any
+
+// TraceProviderConfig configures an OpenTelemetry trace provider.
 type TraceProviderConfig struct {
 	Context        context.Context
 	Name           string
@@ -28,7 +37,7 @@ type TraceProviderConfig struct {
 	SampleFraction float64
 }
 
-// FromEnv load config from env.
+// FromEnv loads trace provider config from environment variables.
 func (c *TraceProviderConfig) FromEnv() {
 	value := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	// The env var may contain a scheme, which we need to remove.
@@ -39,12 +48,12 @@ func (c *TraceProviderConfig) FromEnv() {
 	}
 }
 
-// TraceProvider is an open telemetry trace service.
-type TraceProvider any
-
+// TraceProviderImpl is an OpenTelemetry trace service.
 type TraceProviderImpl struct{}
 
-// NewTraceProvider new an open telemetry trace provider.
+// NewTraceProvider creates an OpenTelemetry trace provider.
+//
+// It returns TraceProvider for backward compatibility with earlier releases.
 func NewTraceProvider(c *TraceProviderConfig) (
 	TraceProvider, func(), error,
 ) {
@@ -57,7 +66,11 @@ func NewTraceProvider(c *TraceProviderConfig) (
 		exportGrpcOptions = append(exportGrpcOptions, otlptracegrpc.WithInsecure())
 	}
 	exportGrpcOptions = append(exportGrpcOptions, otlptracegrpc.WithEndpoint(c.Endpoint))
-	exporter, err := otlptrace.New(c.Context, otlptracegrpc.NewClient(exportGrpcOptions...))
+	ctx := c.Context
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	exporter, err := otlptrace.New(ctx, otlptracegrpc.NewClient(exportGrpcOptions...))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create the collector exporter: %w", err)
 	}
@@ -71,7 +84,7 @@ func NewTraceProvider(c *TraceProviderConfig) (
 		semconv.K8SNamespaceName(kubernetes.GetCurrentNamespace()),
 	}
 	if resourceInEnv := os.Getenv("OTEL_RESOURCE_ATTRIBUTES"); resourceInEnv != "" {
-		for _, attr := range strings.Split(resourceInEnv, ",") {
+		for attr := range strings.SplitSeq(resourceInEnv, ",") {
 			parts := strings.Split(attr, "=")
 			if len(parts) == 2 {
 				attrs = append(attrs, attribute.String(parts[0], parts[1]))
@@ -79,12 +92,15 @@ func NewTraceProvider(c *TraceProviderConfig) (
 		}
 	}
 
-	otel.SetTracerProvider(
-		sdktrace.NewTracerProvider(
-			sdktrace.WithSampler(sdktrace.TraceIDRatioBased(c.SampleFraction)),
-			sdktrace.WithBatcher(exporter),
-			sdktrace.WithResource(resource.NewSchemaless(attrs...)),
-		),
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.TraceIDRatioBased(c.SampleFraction)),
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource.NewSchemaless(attrs...)),
 	)
-	return &TraceProviderImpl{}, func() {}, nil
+	otel.SetTracerProvider(provider)
+	return &TraceProviderImpl{}, func() {
+		ctx, cancel := context.WithTimeout(context.Background(), traceShutdownTimeout)
+		defer cancel()
+		_ = provider.Shutdown(ctx)
+	}, nil
 }

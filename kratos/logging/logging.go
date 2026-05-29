@@ -1,0 +1,248 @@
+package logging
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"reflect"
+	"strings"
+	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+
+	"github.com/crypto-zero/go-kit/kratos/clientip"
+	"github.com/go-kratos/kratos/v2/errors"
+	"github.com/go-kratos/kratos/v2/middleware"
+	"github.com/go-kratos/kratos/v2/transport"
+	kratoshttp "github.com/go-kratos/kratos/v2/transport/http"
+	"github.com/go-kratos/kratos/v2/transport/http/status"
+)
+
+// Redacter defines how to log an object
+type Redacter interface {
+	Redact() string
+}
+
+// Option is logging option.
+type Option func(*options)
+
+type options struct {
+	skipRedact   bool
+	deviceHeader string
+}
+
+// WithSkipRedact ignores the Redacter interface.
+func WithSkipRedact() Option {
+	return func(o *options) {
+		o.skipRedact = true
+	}
+}
+
+// WithDeviceHeader sets a custom header key for extracting device info.
+func WithDeviceHeader(header string) Option {
+	return func(o *options) {
+		o.deviceHeader = header
+	}
+}
+
+// Server is an server logging middleware.
+func Server(logger *slog.Logger, opts ...Option) middleware.Middleware {
+	options := &options{}
+	for _, o := range opts {
+		o(options)
+	}
+	return func(handler middleware.Handler) middleware.Handler {
+		return func(ctx context.Context, req any) (reply any, err error) {
+			var (
+				code      int32
+				reason    string
+				kind      string
+				operation string
+			)
+
+			// default code
+			code = int32(status.FromGRPCCode(codes.OK))
+
+			startTime := time.Now()
+			if info, ok := transport.FromServerContext(ctx); ok {
+				kind = info.Kind().String()
+				operation = info.Operation()
+			}
+			reply, err = handler(ctx, req)
+			if se := errors.FromError(err); se != nil {
+				code = se.Code
+				reason = se.Reason
+			}
+			level, stack := extractError(err)
+			logger.Log(ctx, level,
+				"server",
+				"ip", GetClientIP(ctx),
+				"device", extractJSONOrString(getClientDevice(ctx, options.deviceHeader)),
+				"kind", "server",
+				"component", kind,
+				"operation", operation,
+				"args", extractArgs(req, options.skipRedact),
+				"reply", extractArgs(reply, options.skipRedact),
+				"code", code,
+				"reason", reason,
+				"stack", stack,
+				"latency", time.Since(startTime).Seconds(),
+			)
+			return
+		}
+	}
+}
+
+// Client is a client logging middleware.
+func Client(logger *slog.Logger, opts ...Option) middleware.Middleware {
+	options := &options{}
+	for _, o := range opts {
+		o(options)
+	}
+	return func(handler middleware.Handler) middleware.Handler {
+		return func(ctx context.Context, req any) (reply any, err error) {
+			var (
+				code      int32
+				reason    string
+				kind      string
+				operation string
+			)
+
+			// default code
+			code = int32(status.FromGRPCCode(codes.OK))
+
+			startTime := time.Now()
+			if info, ok := transport.FromClientContext(ctx); ok {
+				kind = info.Kind().String()
+				operation = info.Operation()
+			}
+			reply, err = handler(ctx, req)
+			if se := errors.FromError(err); se != nil {
+				code = se.Code
+				reason = se.Reason
+			}
+			level, stack := extractError(err)
+			logger.Log(ctx, level,
+				"client",
+				"ip", GetClientIP(ctx),
+				"device", extractJSONOrString(getClientDevice(ctx, options.deviceHeader)),
+				"kind", "client",
+				"component", kind,
+				"operation", operation,
+				"args", extractArgs(req, options.skipRedact),
+				"reply", extractArgs(reply, options.skipRedact),
+				"code", code,
+				"reason", reason,
+				"stack", stack,
+				"latency", time.Since(startTime).Seconds(),
+			)
+			return
+		}
+	}
+}
+
+// extractJSONOrString returns json.RawMessage if the string is a valid JSON,
+// otherwise returns the original string.
+func extractJSONOrString(s string) any {
+	if s == "" {
+		return ""
+	}
+	trimmed := strings.TrimSpace(s)
+	// Fast check for likely JSON object or array
+	if len(trimmed) > 1 &&
+		((trimmed[0] == '{' && trimmed[len(trimmed)-1] == '}') ||
+			(trimmed[0] == '[' && trimmed[len(trimmed)-1] == ']')) {
+		// Verify if it is actually valid JSON
+		if json.Valid([]byte(trimmed)) {
+			return json.RawMessage(trimmed)
+		}
+	}
+	return s
+}
+
+// extractArgs returns the args for logging.
+// If req implements Redacter, returns json.RawMessage to avoid double JSON escaping.
+// If req is a proto.Message, uses protojson to serialize it.
+func extractArgs(args any, skipRedact bool) any {
+	if args == nil {
+		return json.RawMessage("{}")
+	}
+	if rv := reflect.ValueOf(args); rv.Kind() == reflect.Ptr && rv.IsNil() {
+		return json.RawMessage("{}")
+	}
+	if !skipRedact {
+		if redacter, ok := args.(Redacter); ok {
+			// Return json.RawMessage so the logger won't escape the JSON string again
+			return json.RawMessage(redacter.Redact())
+		}
+	}
+	if pm, ok := args.(proto.Message); ok {
+		// Use protojson for proto messages without Redacter
+		return json.RawMessage(protojson.Format(pm))
+	}
+	if stringer, ok := args.(fmt.Stringer); ok {
+		return stringer.String()
+	}
+	return fmt.Sprintf("%+v", args)
+}
+
+// extractError returns the slog level and error stack
+func extractError(err error) (slog.Level, string) {
+	if err != nil {
+		return slog.LevelError, fmt.Sprintf("%+v", err)
+	}
+	return slog.LevelInfo, ""
+}
+
+// GetClientIP extracts the client IP address from the request context.
+// Priority: X-Forwarded-For -> X-Real-IP -> RemoteAddr (HTTP) or Peer Address (gRPC).
+// Supports both HTTP and gRPC transports.
+// Returns normalized IP address (IPv4-mapped IPv6 converted to IPv4, Zone ID removed).
+func GetClientIP(ctx context.Context) string {
+	return clientip.FromContext(ctx)
+}
+
+// getClientDevice extracts the client device info (User-Agent or custom header) from the request context.
+// Supports both HTTP and gRPC transports.
+func getClientDevice(ctx context.Context, deviceHeader string) string {
+	tr, ok := transport.FromServerContext(ctx)
+	if !ok {
+		return ""
+	}
+
+	// Handle HTTP transport
+	if httpTr, ok := tr.(*kratoshttp.Transport); ok {
+		req := httpTr.Request()
+		if req == nil {
+			return ""
+		}
+		if deviceHeader != "" {
+			if val := req.Header.Get(deviceHeader); val != "" {
+				return val
+			}
+		}
+		return req.UserAgent()
+	}
+	// Handle gRPC transport
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		// 1. Try custom header first
+		if deviceHeader != "" {
+			// gRPC metadata keys are always lowercase
+			if val := md.Get(strings.ToLower(deviceHeader)); len(val) > 0 {
+				return val[0]
+			}
+		}
+		// 2. Fallback to standard user-agent
+		if ua := md.Get("user-agent"); len(ua) > 0 {
+			return ua[0]
+		}
+		if ua := md.Get("grpc-user-agent"); len(ua) > 0 {
+			return ua[0]
+		}
+	}
+	return ""
+}

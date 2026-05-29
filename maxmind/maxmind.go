@@ -7,7 +7,7 @@ import (
 	"github.com/oschwald/maxminddb-golang"
 )
 
-// GeoNames is a struct for multiple languages
+// GeoNames is a struct for multiple languages.
 type GeoNames struct {
 	German              string `maxminddb:"de"`
 	English             string `maxminddb:"en"`
@@ -19,7 +19,7 @@ type GeoNames struct {
 	Chinese             string `maxminddb:"zh-CN"`
 }
 
-// GeoCity is a struct for maxminddb city result
+// GeoCity is a struct for maxminddb city result.
 type GeoCity struct {
 	City struct {
 		Name GeoNames `maxminddb:"names"`
@@ -53,17 +53,20 @@ type GeoCity struct {
 
 var emptyGeoCity = GeoCity{}
 
-// Database is an interface for maxminddb
+// Database reads GeoCity records from a MaxMind database.
 type Database interface {
-	// Lookup returns GeoCity for given IP
+	// Lookup returns GeoCity for given IP.
 	Lookup(ip net.IP) (*GeoCity, error)
 }
 
-// DatabaseImpl is an implementation of Database
+// DatabaseImpl implements Database.
 type DatabaseImpl struct {
 	db *maxminddb.Reader
 }
 
+var _ Database = (*DatabaseImpl)(nil)
+
+// Lookup returns GeoCity for given IP.
 func (d *DatabaseImpl) Lookup(ip net.IP) (*GeoCity, error) {
 	var record GeoCity
 	if err := d.db.Lookup(ip, &record); err != nil {
@@ -75,16 +78,16 @@ func (d *DatabaseImpl) Lookup(ip net.IP) (*GeoCity, error) {
 	return &record, nil
 }
 
-// Path is a type for maxminddb path
+// Path is a type for maxminddb path.
 type Path string
 
-// ContainerPath returns path to maxminddb container
+// ContainerPath returns path to maxminddb container.
 func ContainerPath() Path {
 	return "/app/bin/GeoLite2-City.mmdb"
 }
 
-// NewDatabaseImpl returns implementation of Database
-func NewDatabaseImpl(path Path) (Database, func(), error) {
+// NewDatabase opens a MaxMind database.
+func NewDatabase(path Path) (*DatabaseImpl, func(), error) {
 	db, err := maxminddb.Open(string(path))
 	if err != nil {
 		return nil, nil, err
@@ -94,7 +97,18 @@ func NewDatabaseImpl(path Path) (Database, func(), error) {
 	}, nil
 }
 
-// IsEmptyGeoCity checks if GeoCity is empty
+// NewDatabaseImpl returns implementation of Database.
+//
+// Deprecated: Use NewDatabase when a concrete *DatabaseImpl is acceptable.
+func NewDatabaseImpl(path Path) (Database, func(), error) {
+	database, cleanup, err := NewDatabase(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	return database, cleanup, nil
+}
+
+// IsEmptyGeoCity checks if GeoCity is empty.
 func IsEmptyGeoCity(geoCity GeoCity) bool {
 	return reflect.DeepEqual(geoCity, emptyGeoCity)
 }

@@ -3,11 +3,11 @@ package election
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +15,11 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
+)
+
+const (
+	loggerNamed   = "__LOGGER.NAMED__"
+	namespacePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
 )
 
 type (
@@ -26,15 +31,13 @@ type (
 		EnsureMaster(ctx context.Context) error
 		// EnsureSlave ensures the state machine is slave.
 		EnsureSlave(ctx context.Context) error
-		// Do the state machine.
+		// Do runs one state machine iteration and returns the delay before the next run.
 		Do(ctx context.Context) (after time.Duration)
-		// Cleanup the state machine.
+		// Cleanup releases resources held by the state machine.
 		Cleanup()
 	}
-	// StateMachineRunner is the state machine runner interface
+	// StateMachineRunner runs leader-elected state machines.
 	StateMachineRunner interface {
-		// implements kratos.Server
-
 		// Start starts the state machine runner.
 		Start(context.Context) error
 		// Stop stops the state machine runner.
@@ -45,11 +48,12 @@ type (
 	}
 )
 
-// StateMachiRunnerImpl is the state machine runner implementation.
-type StateMachiRunnerImpl struct {
-	ctx    context.Context
-	cancel func()
-	closed bool
+// StateMachineRunnerImpl is the state machine runner implementation.
+type StateMachineRunnerImpl struct {
+	ctx         context.Context
+	cancel      func()
+	closed      atomic.Bool
+	cleanupOnce sync.Once
 
 	wg sync.WaitGroup
 
@@ -60,29 +64,35 @@ type StateMachiRunnerImpl struct {
 	logger *slog.Logger
 }
 
+// StateMachiRunnerImpl is deprecated.
+//
+// Deprecated: Use StateMachineRunnerImpl.
+type StateMachiRunnerImpl = StateMachineRunnerImpl
+
 // Start starts the state machine runner.
-func (s *StateMachiRunnerImpl) Start(context.Context) error { return nil }
+func (s *StateMachineRunnerImpl) Start(context.Context) error { return nil }
 
 // Stop stops the state machine runner.
-func (s *StateMachiRunnerImpl) Stop(context.Context) error { return nil }
+func (s *StateMachineRunnerImpl) Stop(context.Context) error {
+	s.cleanup()
+	return nil
+}
 
 // cleanup cleans up the state machine runner.
-func (s *StateMachiRunnerImpl) cleanup() {
-	s.closed = true
-	s.cancel()
-	s.wg.Wait()
+func (s *StateMachineRunnerImpl) cleanup() {
+	s.cleanupOnce.Do(func() {
+		s.closed.Store(true)
+		s.cancel()
+		s.wg.Wait()
+	})
 }
 
 // serveMachine serves the state machine.
-func (s *StateMachiRunnerImpl) serveMachine(machine StateMachine) {
-	// The logger name is conventionally assigned to the key "__LOGGER.NAMED__" defined in go-kit/zap.
-	const (
-		LoggerNamed = "__LOGGER.NAMED__"
-	)
+func (s *StateMachineRunnerImpl) serveMachine(machine StateMachine) {
+	defer s.wg.Done()
 
-	// type hint here that can be omitted
 	name := fmt.Sprintf("state-machine-runner-%s", machine.Name())
-	logger := s.logger.With(LoggerNamed, name)
+	logger := s.logger.With(loggerNamed, name)
 
 	// lease lock name rule: [a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*
 	isLeaderChan := make(chan bool, 10)
@@ -127,7 +137,6 @@ func (s *StateMachiRunnerImpl) serveMachine(machine StateMachine) {
 
 	ctx, cancel := context.WithCancel(s.ctx)
 
-	defer s.wg.Done()
 	defer func() { logger.Info("stopped") }()
 	defer machine.Cleanup()
 	defer cancel()
@@ -161,7 +170,7 @@ func (s *StateMachiRunnerImpl) serveMachine(machine StateMachine) {
 		}
 	}
 
-	for !s.closed {
+	for !s.closed.Load() {
 		after := machine.Do(ctx)
 		if after <= 0 {
 			return
@@ -178,18 +187,13 @@ func (s *StateMachiRunnerImpl) serveMachine(machine StateMachine) {
 	}
 }
 
-func (s *StateMachiRunnerImpl) AddMachine(machine StateMachine) {
+func (s *StateMachineRunnerImpl) AddMachine(machine StateMachine) {
 	s.wg.Add(1)
 	go s.serveMachine(machine)
 }
 
 // NewStateMachineRunnerImpl creates a new StateMachineRunner.
 func NewStateMachineRunnerImpl(logger *slog.Logger) (StateMachineRunner, func(), error) {
-	out := &StateMachiRunnerImpl{
-		logger: logger,
-	}
-	out.ctx, out.cancel = context.WithCancel(context.Background())
-
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, nil, err
@@ -202,17 +206,19 @@ func NewStateMachineRunnerImpl(logger *slog.Logger) (StateMachineRunner, func(),
 	if err != nil {
 		return nil, nil, err
 	}
-	out.cli, out.namespace, out.pod = cli, GetCurrentNamespace(), pod
-	return out, sync.OnceFunc(out.cleanup), nil
+	out := &StateMachineRunnerImpl{
+		logger:    logger,
+		cli:       cli,
+		namespace: GetCurrentNamespace(),
+		pod:       pod,
+	}
+	out.ctx, out.cancel = context.WithCancel(context.Background())
+	return out, out.cleanup, nil
 }
 
 // GetCurrentNamespace returns the current namespace in the kubernetes cluster.
 func GetCurrentNamespace() (namespace string) {
-	namespaceFile, err := os.Open("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-	if err != nil {
-		return ""
-	}
-	d, err := io.ReadAll(namespaceFile)
+	d, err := os.ReadFile(namespacePath)
 	if err != nil {
 		return ""
 	}

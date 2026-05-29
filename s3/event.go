@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// EventName that wraps the event name
+// EventName wraps an S3 event name.
 type EventName string
 
 const (
@@ -39,14 +39,14 @@ const (
 	EventS3ObjectTaggingDelete                          EventName = "s3:ObjectTagging:Delete"
 )
 
-// Event that wraps an array of EventRecord
+// Event wraps a batch of S3 event records.
 type Event struct {
 	EventName EventName     `json:"EventName"`
 	Key       string        `json:"Key"`
 	Records   []EventRecord `json:"Records"`
 }
 
-// EventRecord which wrap record data
+// EventRecord wraps S3 event record data.
 type EventRecord struct {
 	EventVersion      string            `json:"eventVersion"`
 	EventSource       string            `json:"eventSource"`
@@ -60,19 +60,19 @@ type EventRecord struct {
 	Source            Source            `json:"source"`
 }
 
-// UserIdentity that wraps the principal ID
+// UserIdentity wraps the principal ID.
 type UserIdentity struct {
 	PrincipalID string `json:"principalId"`
 }
 
-// RequestParameters that wraps the principal ID, region, and source IP address
+// RequestParameters wraps the principal ID, region, and source IP address.
 type RequestParameters struct {
 	PrincipalID     string `json:"principalId"`
 	Region          string `json:"region"`
 	SourceIPAddress string `json:"sourceIPAddress"`
 }
 
-// Entity that wraps the bucket and object
+// Entity wraps the bucket and object.
 type Entity struct {
 	SchemaVersion   string `json:"s3SchemaVersion"`
 	ConfigurationID string `json:"configurationId"`
@@ -80,7 +80,7 @@ type Entity struct {
 	Object          Object `json:"object"`
 }
 
-// Bucket that wraps the bucket name, owner identity, and ARN
+// Bucket wraps the bucket name, owner identity, and ARN.
 type Bucket struct {
 	Name          string       `json:"name"`
 	OwnerIdentity UserIdentity `json:"ownerIdentity"`
@@ -88,7 +88,7 @@ type Bucket struct {
 }
 
 // Object that wraps the object key, size, ETag, content type, user metadata,
-// version ID, sequencer, and URL-decoded key
+// version ID, sequencer, and URL-decoded key.
 type Object struct {
 	Key           string            `json:"key"`
 	Size          int64             `json:"size,omitempty"`
@@ -113,7 +113,7 @@ func (o *Object) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Source that wraps the source IP address and user agent
+// Source wraps the source IP address and user agent.
 type Source struct {
 	Host      string `json:"host"`
 	Port      string `json:"port"`

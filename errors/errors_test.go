@@ -1,6 +1,7 @@
 package errors
 
 import (
+	stderrors "errors"
 	"reflect"
 	"testing"
 
@@ -52,5 +53,28 @@ func TestError_Clone(t *testing.T) {
 				t.Error("Clone is not equal to original")
 			}
 		})
+	}
+}
+
+func TestError_SetMetadataInitializesMap(t *testing.T) {
+	err := New(400, "bad_request", "bad request")
+
+	got := err.SetMetadata("key", "value")
+
+	if got.Info.Metadata["key"] != "value" {
+		t.Fatalf("SetMetadata() metadata = %v; want key=value", got.Info.Metadata)
+	}
+	if err.Info.Metadata != nil {
+		t.Fatalf("SetMetadata() mutated original metadata = %v; want nil", err.Info.Metadata)
+	}
+}
+
+func TestError_SetCauseInitializesMap(t *testing.T) {
+	err := New(400, "bad_request", "bad request")
+
+	got := err.SetCause(stderrors.New("root cause"))
+
+	if got.Info.Metadata["cause"] != "root cause" {
+		t.Fatalf("SetCause() metadata = %v; want cause=root cause", got.Info.Metadata)
 	}
 }

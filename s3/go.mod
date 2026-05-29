@@ -1,6 +1,6 @@
 module github.com/crypto-zero/go-kit/s3
 
-go 1.25.5
+go 1.26.3
 
 require (
 	github.com/minio/minio-go/v7 v7.0.97

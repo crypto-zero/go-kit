@@ -22,10 +22,10 @@ func HttpServerErrorEncoder(
 	_, _ = w.Write(body)
 }
 
-// RPCHandler is a rpc handler for grpc/http client.
+// RPCHandler is an RPC handler for gRPC/HTTP clients.
 type RPCHandler func(ctx context.Context, req any) (any, error)
 
-// RPCClientErrorParser is a rpc client error parser.
+// RPCClientErrorParser converts client errors into this package's Error type.
 func RPCClientErrorParser(handler RPCHandler) RPCHandler {
 	return func(ctx context.Context, req any) (any, error) {
 		reply, err := handler(ctx, req)

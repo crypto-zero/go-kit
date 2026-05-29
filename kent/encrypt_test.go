@@ -216,7 +216,7 @@ func TestEncryptDecrypt_MultipleRoundTrips(t *testing.T) {
 	plaintext := "test message"
 
 	// Perform multiple encrypt-decrypt cycles
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		ciphertext, err := encryptor.Encrypt(plaintext)
 		if err != nil {
 			t.Fatalf("Encrypt() iteration %d error = %v", i, err)
@@ -302,7 +302,7 @@ func TestEncryptDecrypt_Concurrent(t *testing.T) {
 	done := make(chan bool, iterations)
 
 	// Concurrent encryption
-	for i := 0; i < iterations; i++ {
+	for i := range iterations {
 		go func(id int) {
 			ciphertext, err := encryptor.Encrypt(plaintext)
 			if err != nil {
@@ -330,7 +330,7 @@ func TestEncryptDecrypt_Concurrent(t *testing.T) {
 
 	// Wait for all goroutines
 	successCount := 0
-	for i := 0; i < iterations; i++ {
+	for range iterations {
 		if <-done {
 			successCount++
 		}

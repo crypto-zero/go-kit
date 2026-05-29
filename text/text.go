@@ -7,31 +7,26 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"math"
 	"math/big"
 	mrand "math/rand"
-	"os"
 	"strings"
 	"unicode"
 
 	"golang.org/x/text/width"
 )
 
-// GeneratePassword generate password from /dev/urandom.
+// GeneratePassword generates a password from cryptographically secure random bytes.
 func GeneratePassword(size int, accept func(byte) bool) (string, error) {
-	f, err := os.Open("/dev/urandom")
-	if err != nil {
-		return "", fmt.Errorf("open /dev/urandom: %w", err)
-	}
 	password := make([]byte, 0, size)
 	for len(password) < size {
 		buf := make([]byte, size*2)
-		n, err := f.Read(buf)
+		n, err := io.ReadFull(crand.Reader, buf)
 		if err != nil {
-			return "", fmt.Errorf("read /dev/urandom: %w", err)
+			return "", fmt.Errorf("read random bytes: %w", err)
 		}
-		for idx := 0; idx < n; idx++ {
-			// Ascii printable characters
+		for idx := range n {
 			if accept(buf[idx]) && len(password) < size {
 				password = append(password, buf[idx])
 			}
@@ -40,7 +35,7 @@ func GeneratePassword(size int, accept func(byte) bool) (string, error) {
 	return string(password), nil
 }
 
-// GeneratePasswordLitterNumbers generate password with litter and numbers.
+// GeneratePasswordLitterNumbers generates a password with letters and numbers.
 func GeneratePasswordLitterNumbers(size int) (string, error) {
 	return GeneratePassword(size, func(b byte) bool {
 		return b >= '0' && b <= '9' || b >= 'A' && b <= 'Z' || b >= 'a' && b <= 'z'
@@ -64,8 +59,8 @@ func RandString(length int) string {
 // maxInt64 is the maximum value of int64.
 var maxInt64 = big.NewInt(math.MaxInt64)
 
-// RandStringWithCharset returns a random string with given length and charset.
-// it uses crypto/rand to generate random string.
+// RandStringWithCharset returns a random string with the given length and charset.
+// It uses crypto/rand when available.
 func RandStringWithCharset(length int, charset string) string {
 	var seed int64
 	if err := binary.Read(crand.Reader, binary.BigEndian, &seed); err != nil {
@@ -99,17 +94,17 @@ func CleanAllSpace(s string) string {
 	}, s)
 }
 
-// NarrowString 全角转半角
+// NarrowString converts full-width characters to half-width characters.
 func NarrowString(s string) string {
 	return width.Narrow.String(s)
 }
 
-// CleanString clean all space and narrow string
+// CleanString removes all spaces and narrows full-width characters.
 func CleanString(s string) string {
 	return CleanAllSpace(NarrowString(strings.ToValidUTF8(s, "")))
 }
 
-// TrimString trim prefix and suffix space and narrow string
+// TrimString trims surrounding spaces and narrows full-width characters.
 func TrimString(s string) string {
 	return strings.TrimSpace(NarrowString(strings.ToValidUTF8(s, "")))
 }

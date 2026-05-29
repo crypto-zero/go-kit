@@ -1,0 +1,56 @@
+version: "3"
+
+vars:
+  GO_MODULES:
+    sh: find . -name go.mod -not -path './.git/*' -exec dirname {} \; | sort
+
+tasks:
+  default:
+    desc: Run all repository verification checks.
+    cmds:
+      - task: all
+
+  all:
+    desc: Run all repository verification checks.
+    deps:
+      - test
+      - vet
+      - proto
+
+  test:
+    desc: Run tests for all Go modules.
+    cmds:
+      - for: { var: GO_MODULES }
+        task: test:module
+        vars:
+          MODULE: "{{.ITEM}}"
+
+  test:module:
+    internal: true
+    dir: "{{.MODULE}}"
+    cmds:
+      - go test ./...
+
+  vet:
+    desc: Run go vet for all Go modules.
+    cmds:
+      - for: { var: GO_MODULES }
+        task: vet:module
+        vars:
+          MODULE: "{{.ITEM}}"
+
+  vet:module:
+    internal: true
+    dir: "{{.MODULE}}"
+    cmds:
+      - go vet ./...
+
+  proto:
+    desc: Lint proto files with buf.
+    cmds:
+      - buf lint
+
+  verify:
+    desc: Run all repository verification checks.
+    cmds:
+      - task: all
