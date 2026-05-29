@@ -35,6 +35,7 @@ type AuthConfig[T any] struct {
 	NewUserContext        func(context.Context, *T) context.Context
 	IsSessionNotFound     func(error) bool
 	UnauthenticatedReason string
+	UnauthenticatedError  error
 }
 
 // Auth returns a grpc-gateway middleware that authenticates non-public routes
@@ -59,7 +60,11 @@ func Auth[T any](cfg AuthConfig[T]) runtime.Middleware {
 			if err != nil {
 				_, marshaler := runtime.MarshalerForRequest(runtime.NewServeMux(), r)
 				if kiterrors.IsUnauthorized(err) {
-					err = kiterrors.Unauthorized(reason, "invalid token")
+					if cfg.UnauthenticatedError != nil {
+						err = cfg.UnauthenticatedError
+					} else {
+						err = kiterrors.Unauthorized(reason, "invalid token")
+					}
 				}
 				WriteError(w, marshaler, err)
 				return

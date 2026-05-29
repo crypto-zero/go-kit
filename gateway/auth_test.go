@@ -5,9 +5,11 @@ import (
 	stderrors "errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
+	kiterrors "github.com/crypto-zero/go-kit/errors"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
 
@@ -104,5 +106,29 @@ func TestAuthMiddlewareRejectsMissingToken(t *testing.T) {
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusUnauthorized, rec.Body.String())
+	}
+}
+
+func TestAuthMiddlewareUsesConfiguredUnauthenticatedError(t *testing.T) {
+	mux := runtime.NewServeMux(runtime.WithMiddlewares(Auth(AuthConfig[testUser]{
+		Cache:                testSessionCache{userID: 42},
+		Provider:             testUserProvider{user: &testUser{ID: 42}},
+		NewUserContext:       func(ctx context.Context, user *testUser) context.Context { return ctx },
+		UnauthenticatedError: kiterrors.New(401, "PROJECT_INVALID_TOKEN", "project invalid token"),
+	})))
+	if err := mux.HandlePath(http.MethodGet, "/v1/private", func(w http.ResponseWriter, _ *http.Request, _ map[string]string) {
+		w.WriteHeader(http.StatusNoContent)
+	}); err != nil {
+		t.Fatalf("HandlePath: %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/private", nil))
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusUnauthorized, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "PROJECT_INVALID_TOKEN") {
+		t.Fatalf("body missing configured reason: %s", rec.Body.String())
 	}
 }
