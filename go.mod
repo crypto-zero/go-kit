@@ -7,7 +7,6 @@ require (
 	entgo.io/ent v0.14.5
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/google/gops v0.3.28
-	github.com/google/wire v0.7.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/jackc/pgx/v5 v5.7.6

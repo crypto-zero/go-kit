@@ -1,15 +1,6 @@
+// Package go_kit is the root package for the module.
+//
+// Prefer importing concrete subpackages directly. The root package intentionally
+// avoids dependency injection provider sets so consumers can use focused helpers
+// without pulling unrelated runtime dependencies.
 package go_kit
-
-import (
-	"github.com/crypto-zero/go-kit/maxmind"
-	"github.com/crypto-zero/go-kit/otel"
-	"github.com/crypto-zero/go-kit/pprof"
-	"github.com/google/wire"
-)
-
-var ProviderSet = wire.NewSet(
-	pprof.NewPProfImpl,
-	otel.NewTraceProvider,
-	maxmind.ContainerPath,
-	maxmind.NewDatabaseImpl,
-)
