@@ -36,7 +36,7 @@ func TestNewServerAppliesDefaultsAndIndependentTimeouts(t *testing.T) {
 	if srv.network != defaultHTTPNetwork {
 		t.Fatalf("network = %q, want %q", srv.network, defaultHTTPNetwork)
 	}
-	httpServer := srv.HTTPServer()
+	httpServer := srv.GatewayServer()
 	if httpServer.Addr != defaultHTTPAddr {
 		t.Fatalf("addr = %q, want %q", httpServer.Addr, defaultHTTPAddr)
 	}

@@ -72,9 +72,16 @@ func (s *Server) Stop(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
-// HTTPServer exposes the underlying stdlib HTTP server for tests and advanced configuration.
-func (s *Server) HTTPServer() *http.Server {
+// GatewayServer exposes the underlying stdlib HTTP server for tests and advanced configuration.
+func (s *Server) GatewayServer() *http.Server {
 	return s.server
+}
+
+// HTTPServer exposes the underlying stdlib HTTP server for tests and advanced configuration.
+//
+// Deprecated: use GatewayServer.
+func (s *Server) HTTPServer() *http.Server {
+	return s.GatewayServer()
 }
 
 // RequestTimeout returns a handler that applies timeout to each request context.
