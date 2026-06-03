@@ -224,6 +224,52 @@ func (x *EnumErrorDetail) GetCode() EnumErrorDetail_Code {
 	return EnumErrorDetail_CODE_UNSPECIFIED
 }
 
+// ErrorReasonDescriptorDependencies keeps runtime error descriptors reachable
+// from API protos that only import error_reason.proto for enum annotations.
+type ErrorReasonDescriptorDependencies struct {
+	state         protoimpl.MessageState            `protogen:"open.v1"`
+	GrpcStatus    *GrpcStatusDescriptorDependencies `protobuf:"bytes,1,opt,name=grpc_status,json=grpcStatus,proto3" json:"grpc_status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ErrorReasonDescriptorDependencies) Reset() {
+	*x = ErrorReasonDescriptorDependencies{}
+	mi := &file_kit_errors_v1_error_reason_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ErrorReasonDescriptorDependencies) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ErrorReasonDescriptorDependencies) ProtoMessage() {}
+
+func (x *ErrorReasonDescriptorDependencies) ProtoReflect() protoreflect.Message {
+	mi := &file_kit_errors_v1_error_reason_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ErrorReasonDescriptorDependencies.ProtoReflect.Descriptor instead.
+func (*ErrorReasonDescriptorDependencies) Descriptor() ([]byte, []int) {
+	return file_kit_errors_v1_error_reason_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ErrorReasonDescriptorDependencies) GetGrpcStatus() *GrpcStatusDescriptorDependencies {
+	if x != nil {
+		return x.GrpcStatus
+	}
+	return nil
+}
+
 var file_kit_errors_v1_error_reason_proto_extTypes = []protoimpl.ExtensionInfo{
 	{
 		ExtendedType:  (*descriptorpb.EnumValueOptions)(nil),
@@ -245,7 +291,7 @@ var File_kit_errors_v1_error_reason_proto protoreflect.FileDescriptor
 
 const file_kit_errors_v1_error_reason_proto_rawDesc = "" +
 	"\n" +
-	" kit/errors/v1/error_reason.proto\x12\rkit.errors.v1\x1a google/protobuf/descriptor.proto\"\xc9\x03\n" +
+	" kit/errors/v1/error_reason.proto\x12\rkit.errors.v1\x1a google/protobuf/descriptor.proto\x1a\x1akit/errors/v1/errors.proto\"\xc9\x03\n" +
 	"\x0fEnumErrorDetail\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x127\n" +
 	"\x04code\x18\x02 \x01(\x0e2#.kit.errors.v1.EnumErrorDetail.CodeR\x04code\"\xe2\x02\n" +
@@ -262,7 +308,10 @@ const file_kit_errors_v1_error_reason_proto_rawDesc = "" +
 	"\x1aCODE_CLIENT_CLOSED_REQUEST\x10\xf3\x03\x12\x1f\n" +
 	"\x1aCODE_INTERNAL_SERVER_ERROR\x10\xf4\x03\x12\x1d\n" +
 	"\x18CODE_SERVICE_UNAVAILABLE\x10\xf7\x03\x12\x19\n" +
-	"\x14CODE_GATEWAY_TIMEOUT\x10\xf8\x03*\x9d\x02\n" +
+	"\x14CODE_GATEWAY_TIMEOUT\x10\xf8\x03\"u\n" +
+	"!ErrorReasonDescriptorDependencies\x12P\n" +
+	"\vgrpc_status\x18\x01 \x01(\v2/.kit.errors.v1.GrpcStatusDescriptorDependenciesR\n" +
+	"grpcStatus*\x9d\x02\n" +
 	"\x12GeneralErrorReason\x12<\n" +
 	" GENERAL_ERROR_REASON_UNSPECIFIED\x10\x00\x1a\x16\xe2O\x13\n" +
 	"\x11unspecified error\x12?\n" +
@@ -287,22 +336,25 @@ func file_kit_errors_v1_error_reason_proto_rawDescGZIP() []byte {
 }
 
 var file_kit_errors_v1_error_reason_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_kit_errors_v1_error_reason_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_kit_errors_v1_error_reason_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_kit_errors_v1_error_reason_proto_goTypes = []any{
-	(GeneralErrorReason)(0),               // 0: kit.errors.v1.GeneralErrorReason
-	(EnumErrorDetail_Code)(0),             // 1: kit.errors.v1.EnumErrorDetail.Code
-	(*EnumErrorDetail)(nil),               // 2: kit.errors.v1.EnumErrorDetail
-	(*descriptorpb.EnumValueOptions)(nil), // 3: google.protobuf.EnumValueOptions
+	(GeneralErrorReason)(0),                   // 0: kit.errors.v1.GeneralErrorReason
+	(EnumErrorDetail_Code)(0),                 // 1: kit.errors.v1.EnumErrorDetail.Code
+	(*EnumErrorDetail)(nil),                   // 2: kit.errors.v1.EnumErrorDetail
+	(*ErrorReasonDescriptorDependencies)(nil), // 3: kit.errors.v1.ErrorReasonDescriptorDependencies
+	(*GrpcStatusDescriptorDependencies)(nil),  // 4: kit.errors.v1.GrpcStatusDescriptorDependencies
+	(*descriptorpb.EnumValueOptions)(nil),     // 5: google.protobuf.EnumValueOptions
 }
 var file_kit_errors_v1_error_reason_proto_depIdxs = []int32{
 	1, // 0: kit.errors.v1.EnumErrorDetail.code:type_name -> kit.errors.v1.EnumErrorDetail.Code
-	3, // 1: kit.errors.v1.error_detail:extendee -> google.protobuf.EnumValueOptions
-	2, // 2: kit.errors.v1.error_detail:type_name -> kit.errors.v1.EnumErrorDetail
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	2, // [2:3] is the sub-list for extension type_name
-	1, // [1:2] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	4, // 1: kit.errors.v1.ErrorReasonDescriptorDependencies.grpc_status:type_name -> kit.errors.v1.GrpcStatusDescriptorDependencies
+	5, // 2: kit.errors.v1.error_detail:extendee -> google.protobuf.EnumValueOptions
+	2, // 3: kit.errors.v1.error_detail:type_name -> kit.errors.v1.EnumErrorDetail
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	3, // [3:4] is the sub-list for extension type_name
+	2, // [2:3] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_kit_errors_v1_error_reason_proto_init() }
@@ -310,13 +362,14 @@ func file_kit_errors_v1_error_reason_proto_init() {
 	if File_kit_errors_v1_error_reason_proto != nil {
 		return
 	}
+	file_kit_errors_v1_errors_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_kit_errors_v1_error_reason_proto_rawDesc), len(file_kit_errors_v1_error_reason_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 1,
 			NumServices:   0,
 		},

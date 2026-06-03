@@ -3,6 +3,7 @@ syntax = "proto3";
 package kit.errors.v1;
 
 import "google/protobuf/descriptor.proto";
+import "kit/errors/v1/errors.proto";
 
 // fixed go package name cause final we have to copy the generated go code to
 option go_package = "github.com/crypto-zero/go-kit/errors;errors";
@@ -67,4 +68,10 @@ enum GeneralErrorReason {
     message: "request not valid"
     code: CODE_BAD_REQUEST
   }];
+}
+
+// ErrorReasonDescriptorDependencies keeps runtime error descriptors reachable
+// from API protos that only import error_reason.proto for enum annotations.
+message ErrorReasonDescriptorDependencies {
+  GrpcStatusDescriptorDependencies grpc_status = 1;
 }
