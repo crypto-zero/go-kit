@@ -8,6 +8,7 @@ package errors
 
 import (
 	errdetails "google.golang.org/genproto/googleapis/rpc/errdetails"
+	status "google.golang.org/genproto/googleapis/rpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	anypb "google.golang.org/protobuf/types/known/anypb"
@@ -91,16 +92,64 @@ func (x *Error) GetDetails() []*anypb.Any {
 	return nil
 }
 
+// GrpcStatusDescriptorDependencies keeps google.rpc error types in descriptor
+// sets for proxies that render grpc-status-details-bin as JSON.
+type GrpcStatusDescriptorDependencies struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        *status.Status         `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GrpcStatusDescriptorDependencies) Reset() {
+	*x = GrpcStatusDescriptorDependencies{}
+	mi := &file_kit_errors_v1_errors_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GrpcStatusDescriptorDependencies) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GrpcStatusDescriptorDependencies) ProtoMessage() {}
+
+func (x *GrpcStatusDescriptorDependencies) ProtoReflect() protoreflect.Message {
+	mi := &file_kit_errors_v1_errors_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GrpcStatusDescriptorDependencies.ProtoReflect.Descriptor instead.
+func (*GrpcStatusDescriptorDependencies) Descriptor() ([]byte, []int) {
+	return file_kit_errors_v1_errors_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *GrpcStatusDescriptorDependencies) GetStatus() *status.Status {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
 var File_kit_errors_v1_errors_proto protoreflect.FileDescriptor
 
 const file_kit_errors_v1_errors_proto_rawDesc = "" +
 	"\n" +
-	"\x1akit/errors/v1/errors.proto\x12\rkit.errors.v1\x1a\x19google/protobuf/any.proto\x1a\x1egoogle/rpc/error_details.proto\"\x94\x01\n" +
+	"\x1akit/errors/v1/errors.proto\x12\rkit.errors.v1\x1a\x19google/protobuf/any.proto\x1a\x1egoogle/rpc/error_details.proto\x1a\x17google/rpc/status.proto\"\x94\x01\n" +
 	"\x05Error\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\x05R\x06status\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12)\n" +
 	"\x04info\x18\x03 \x01(\v2\x15.google.rpc.ErrorInfoR\x04info\x12.\n" +
-	"\adetails\x18\x04 \x03(\v2\x14.google.protobuf.AnyR\adetailsB-Z+github.com/crypto-zero/go-kit/errors;errorsb\x06proto3"
+	"\adetails\x18\x04 \x03(\v2\x14.google.protobuf.AnyR\adetails\"N\n" +
+	" GrpcStatusDescriptorDependencies\x12*\n" +
+	"\x06status\x18\x01 \x01(\v2\x12.google.rpc.StatusR\x06statusB-Z+github.com/crypto-zero/go-kit/errors;errorsb\x06proto3"
 
 var (
 	file_kit_errors_v1_errors_proto_rawDescOnce sync.Once
@@ -114,20 +163,23 @@ func file_kit_errors_v1_errors_proto_rawDescGZIP() []byte {
 	return file_kit_errors_v1_errors_proto_rawDescData
 }
 
-var file_kit_errors_v1_errors_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_kit_errors_v1_errors_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_kit_errors_v1_errors_proto_goTypes = []any{
-	(*Error)(nil),                // 0: kit.errors.v1.Error
-	(*errdetails.ErrorInfo)(nil), // 1: google.rpc.ErrorInfo
-	(*anypb.Any)(nil),            // 2: google.protobuf.Any
+	(*Error)(nil),                            // 0: kit.errors.v1.Error
+	(*GrpcStatusDescriptorDependencies)(nil), // 1: kit.errors.v1.GrpcStatusDescriptorDependencies
+	(*errdetails.ErrorInfo)(nil),             // 2: google.rpc.ErrorInfo
+	(*anypb.Any)(nil),                        // 3: google.protobuf.Any
+	(*status.Status)(nil),                    // 4: google.rpc.Status
 }
 var file_kit_errors_v1_errors_proto_depIdxs = []int32{
-	1, // 0: kit.errors.v1.Error.info:type_name -> google.rpc.ErrorInfo
-	2, // 1: kit.errors.v1.Error.details:type_name -> google.protobuf.Any
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	2, // 0: kit.errors.v1.Error.info:type_name -> google.rpc.ErrorInfo
+	3, // 1: kit.errors.v1.Error.details:type_name -> google.protobuf.Any
+	4, // 2: kit.errors.v1.GrpcStatusDescriptorDependencies.status:type_name -> google.rpc.Status
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_kit_errors_v1_errors_proto_init() }
@@ -141,7 +193,7 @@ func file_kit_errors_v1_errors_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_kit_errors_v1_errors_proto_rawDesc), len(file_kit_errors_v1_errors_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
