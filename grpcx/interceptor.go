@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -19,23 +20,16 @@ import (
 
 const okCode = 200
 
-var defaultSensitiveFields = map[string]struct{}{
-	"access_token":      {},
-	"refresh_token":     {},
-	"session_token":     {},
-	"signature":         {},
-	"token":             {},
-	"upload_token":      {},
-	"upload_token_hash": {},
-}
-
 // LoggingOption configures gRPC server request logging.
 type LoggingOption func(*loggingOptions)
 
 type loggingOptions struct {
-	component       string
-	deviceKeys      []string
-	sensitiveFields map[string]struct{}
+	component  string
+	deviceKeys []string
+}
+
+type redacter interface {
+	Redact() string
 }
 
 // WithLoggingComponent sets the logged component field.
@@ -52,24 +46,18 @@ func WithDeviceMetadataKeys(keys ...string) LoggingOption {
 	}
 }
 
-// WithSensitiveFields adds field names that should be redacted from logged payloads.
-func WithSensitiveFields(fields ...string) LoggingOption {
-	return func(o *loggingOptions) {
-		if o.sensitiveFields == nil {
-			o.sensitiveFields = make(map[string]struct{}, len(fields))
-		}
-		for _, field := range fields {
-			o.sensitiveFields[strings.ToLower(field)] = struct{}{}
-		}
-	}
-}
-
 // Recovery returns a unary interceptor that converts panics into internal errors.
 func Recovery(logger *slog.Logger) grpc.UnaryServerInterceptor {
+	logger = nonNilLogger(logger)
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 		defer func() {
 			if recovered := recover(); recovered != nil {
-				logger.ErrorContext(ctx, "grpc panic recovered", "method", fullMethod(info), "panic", recovered)
+				logger.ErrorContext(ctx,
+					"grpc panic recovered",
+					"method", fullMethod(info),
+					"panic", recovered,
+					"stack", string(debug.Stack()),
+				)
 				err = kiterrors.InternalServer("INTERNAL", "internal server error")
 			}
 		}()
@@ -79,13 +67,14 @@ func Recovery(logger *slog.Logger) grpc.UnaryServerInterceptor {
 
 // Logging returns a unary interceptor with kratos-compatible request fields.
 func Logging(logger *slog.Logger, opts ...LoggingOption) grpc.UnaryServerInterceptor {
+	logger = nonNilLogger(logger)
 	options := newLoggingOptions(opts...)
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		start := time.Now()
 		resp, err := handler(ctx, req)
 		latency := time.Since(start)
 		method := fullMethod(info)
-		code, reason, stack := errorFields(err)
+		code, reason := errorFields(err)
 		attrs := []any{
 			"ip", ClientIP(ctx),
 			"device", metadataValue(ctx, options.deviceKeys),
@@ -93,17 +82,16 @@ func Logging(logger *slog.Logger, opts ...LoggingOption) grpc.UnaryServerInterce
 			"component", options.component,
 			"operation", method,
 			"method", method,
-			"args", logPayload(req, options.sensitiveFields),
-			"reply", logPayload(resp, options.sensitiveFields),
+			"args", logPayload(req),
+			"reply", logPayload(resp),
 			"code", code,
 			"reason", reason,
-			"stack", stack,
 			"latency", latency.Seconds(),
 			"duration", latency,
 		}
 		if err != nil {
 			attrs = append(attrs, "err", err)
-			logger.ErrorContext(ctx, "grpc request failed", attrs...)
+			logErrorContext(logger, ctx, code, "grpc request failed", attrs...)
 			return resp, err
 		}
 		logger.InfoContext(ctx, "grpc request completed", attrs...)
@@ -136,12 +124,8 @@ func ClientIP(ctx context.Context) string {
 
 func newLoggingOptions(opts ...LoggingOption) loggingOptions {
 	options := loggingOptions{
-		component:       "grpc",
-		deviceKeys:      []string{"user-agent", "grpc-user-agent", "x-device", "x-client-device"},
-		sensitiveFields: make(map[string]struct{}, len(defaultSensitiveFields)),
-	}
-	for field := range defaultSensitiveFields {
-		options.sensitiveFields[field] = struct{}{}
+		component:  "grpc",
+		deviceKeys: []string{"user-agent", "grpc-user-agent", "x-device", "x-client-device"},
 	}
 	for _, opt := range opts {
 		opt(&options)
@@ -156,11 +140,26 @@ func fullMethod(info *grpc.UnaryServerInfo) string {
 	return info.FullMethod
 }
 
-func errorFields(err error) (code int, reason, stack string) {
+func errorFields(err error) (code int, reason string) {
 	if err == nil {
-		return okCode, "", ""
+		return okCode, ""
 	}
-	return kiterrors.Code(err), kiterrors.Reason(err), err.Error()
+	return kiterrors.Code(err), kiterrors.Reason(err)
+}
+
+func logErrorContext(logger *slog.Logger, ctx context.Context, code int, msg string, attrs ...any) {
+	if code >= 500 {
+		logger.ErrorContext(ctx, msg, attrs...)
+		return
+	}
+	logger.WarnContext(ctx, msg, attrs...)
+}
+
+func nonNilLogger(logger *slog.Logger) *slog.Logger {
+	if logger != nil {
+		return logger
+	}
+	return slog.Default()
 }
 
 func metadataValue(ctx context.Context, keys []string) string {
@@ -184,51 +183,32 @@ func firstIP(value string) string {
 	return strings.TrimSpace(value)
 }
 
-func logPayload(v any, sensitiveFields map[string]struct{}) any {
+func logPayload(v any) any {
 	if v == nil {
 		return json.RawMessage("{}")
+	}
+	if r, ok := v.(redacter); ok {
+		return redactedPayload(r.Redact())
 	}
 	pm, ok := v.(proto.Message)
 	if !ok {
 		return v
 	}
 	data, err := protojson.MarshalOptions{
-		UseProtoNames:   true,
-		EmitUnpopulated: true,
+		UseProtoNames: true,
 	}.Marshal(pm)
 	if err != nil {
 		return v
 	}
-	return redactJSON(data, sensitiveFields)
+	return json.RawMessage(data)
 }
 
-func redactJSON(data []byte, sensitiveFields map[string]struct{}) any {
-	var value any
-	if err := json.Unmarshal(data, &value); err != nil {
+func redactedPayload(data string) any {
+	if data == "" {
+		return json.RawMessage("{}")
+	}
+	if json.Valid([]byte(data)) {
 		return json.RawMessage(data)
 	}
-	redactValue(value, sensitiveFields)
-	out, err := json.Marshal(value)
-	if err != nil {
-		return json.RawMessage(data)
-	}
-	return json.RawMessage(out)
-}
-
-func redactValue(value any, sensitiveFields map[string]struct{}) {
-	switch v := value.(type) {
-	case map[string]any:
-		for key, field := range v {
-			if _, ok := sensitiveFields[strings.ToLower(key)]; ok {
-				v[key] = "[REDACTED]"
-				continue
-			}
-			redactValue(field, sensitiveFields)
-		}
-	case []any:
-		for _, item := range v {
-			redactValue(item, sensitiveFields)
-		}
-	default:
-	}
+	return data
 }
