@@ -105,6 +105,34 @@ func TestLoggingAddsKratosStyleFields(t *testing.T) {
 	}
 }
 
+func TestLoggingSkipsGeneratedRedaction(t *testing.T) {
+	var out bytes.Buffer
+	interceptor := Logging(slog.New(slog.NewJSONHandler(&out, nil)), WithSkipRedact())
+	payload, err := structpb.NewStruct(map[string]any{
+		"safe":   "visible",
+		"secret": "plain-secret",
+	})
+	if err != nil {
+		t.Fatalf("new struct: %v", err)
+	}
+
+	_, err = interceptor(context.Background(), &generatedRedacter{Struct: payload}, &grpc.UnaryServerInfo{
+		FullMethod: "/test.Service/Method",
+	}, func(context.Context, any) (any, error) {
+		return nil, nil
+	})
+	if err != nil {
+		t.Fatalf("interceptor: %v", err)
+	}
+	body := out.String()
+	if !strings.Contains(body, `plain-secret`) {
+		t.Fatalf("log = %s, want original payload when redaction is skipped", body)
+	}
+	if strings.Contains(body, `[MASKED]`) {
+		t.Fatalf("log used generated redaction despite WithSkipRedact: %s", body)
+	}
+}
+
 func TestClientIPUsesForwardedMetadata(t *testing.T) {
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		"x-forwarded-for", "203.0.113.1, 10.0.0.1",
@@ -123,9 +151,9 @@ func TestLogPayloadUsesGeneratedRedactMethod(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new struct: %v", err)
 	}
-	raw, ok := logPayload(&generatedRedacter{Struct: payload}).(json.RawMessage)
+	raw, ok := logPayload(&generatedRedacter{Struct: payload}, false).(json.RawMessage)
 	if !ok {
-		t.Fatalf("log payload type = %T, want json.RawMessage", logPayload(payload))
+		t.Fatalf("log payload type = %T, want json.RawMessage", logPayload(payload, false))
 	}
 	body := string(raw)
 	for _, field := range []string{
@@ -141,6 +169,27 @@ func TestLogPayloadUsesGeneratedRedactMethod(t *testing.T) {
 	}
 }
 
+func TestLogPayloadSkipsGeneratedRedactMethod(t *testing.T) {
+	payload, err := structpb.NewStruct(map[string]any{
+		"safe":   "visible",
+		"secret": "plain-secret",
+	})
+	if err != nil {
+		t.Fatalf("new struct: %v", err)
+	}
+	raw, ok := logPayload(&generatedRedacter{Struct: payload}, true).(json.RawMessage)
+	if !ok {
+		t.Fatalf("log payload type = %T, want json.RawMessage", logPayload(payload, false))
+	}
+	body := string(raw)
+	if !strings.Contains(body, `"secret":"plain-secret"`) {
+		t.Fatalf("payload = %s, want original secret when redaction is skipped", body)
+	}
+	if strings.Contains(body, "[MASKED]") {
+		t.Fatalf("payload used generated redaction despite skipRedact: %s", body)
+	}
+}
+
 func TestLogPayloadReturnsInvalidGeneratedRedactAsString(t *testing.T) {
 	payload, err := structpb.NewStruct(map[string]any{
 		"safe": "visible",
@@ -148,16 +197,16 @@ func TestLogPayloadReturnsInvalidGeneratedRedactAsString(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new struct: %v", err)
 	}
-	got := logPayload(&invalidGeneratedRedacter{Struct: payload})
+	got := logPayload(&invalidGeneratedRedacter{Struct: payload}, false)
 	if got != "masked" {
 		t.Fatalf("logPayload = %#v, want masked string", got)
 	}
 }
 
 func TestLogPayloadUsesProtoNamesWithoutUnpopulatedFields(t *testing.T) {
-	raw, ok := logPayload(&redactv1.RedactOptions{}).(json.RawMessage)
+	raw, ok := logPayload(&redactv1.RedactOptions{}, false).(json.RawMessage)
 	if !ok {
-		t.Fatalf("log payload type = %T, want json.RawMessage", logPayload(&redactv1.RedactOptions{}))
+		t.Fatalf("log payload type = %T, want json.RawMessage", logPayload(&redactv1.RedactOptions{}, false))
 	}
 	body := string(raw)
 	if body != "{}" {
@@ -166,9 +215,9 @@ func TestLogPayloadUsesProtoNamesWithoutUnpopulatedFields(t *testing.T) {
 
 	raw, ok = logPayload(&redactv1.RedactOptions{
 		MaskValue: &redactv1.RedactOptions_StringMask{StringMask: "[MASKED]"},
-	}).(json.RawMessage)
+	}, false).(json.RawMessage)
 	if !ok {
-		t.Fatalf("log payload type = %T, want json.RawMessage", logPayload(&redactv1.RedactOptions{}))
+		t.Fatalf("log payload type = %T, want json.RawMessage", logPayload(&redactv1.RedactOptions{}, false))
 	}
 	body = string(raw)
 	if !strings.Contains(body, `"string_mask":"[MASKED]"`) {
