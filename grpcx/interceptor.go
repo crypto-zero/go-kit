@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log/slog"
 	"net"
+	"net/netip"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -149,14 +150,27 @@ func Logging(logger *slog.Logger, opts ...LoggingOption) grpc.UnaryServerInterce
 }
 
 // ClientIP returns the most likely client IP from incoming gRPC context metadata.
+//
+// Trust model: forwarded headers are client-supplied unless a trusted edge
+// (Cloudflare, Envoy, nginx) strips or overwrites them — deploy behind such
+// an edge for meaningful values, and treat the result as a logging hint, not
+// an authorization input. Overwrite-style single-value headers set by a known
+// edge (cf-connecting-ip, x-real-ip) take precedence over the append-style
+// x-forwarded-for, from which the rightmost valid IP — the closest verifiable
+// hop — is used. Values that do not parse as IP addresses are ignored.
 func ClientIP(ctx context.Context) string {
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
-		for _, key := range []string{"x-forwarded-for", "x-real-ip", "cf-connecting-ip"} {
+		for _, key := range []string{"cf-connecting-ip", "x-real-ip"} {
 			values := md.Get(key)
 			if len(values) == 0 {
 				continue
 			}
-			if ip := firstIP(values[0]); ip != "" {
+			if ip := validIP(values[0]); ip != "" {
+				return ip
+			}
+		}
+		if values := md.Get("x-forwarded-for"); len(values) > 0 {
+			if ip := rightmostValidIP(values[0]); ip != "" {
 				return ip
 			}
 		}
@@ -225,11 +239,25 @@ func metadataValue(ctx context.Context, keys []string) string {
 	return ""
 }
 
-func firstIP(value string) string {
-	if before, _, ok := strings.Cut(value, ","); ok {
-		value = before
+// rightmostValidIP picks the rightmost parseable IP from a comma-separated
+// x-forwarded-for list: proxies append, so the right end is the closest
+// verifiable hop while the left end is client-controlled.
+func rightmostValidIP(list string) string {
+	entries := strings.Split(list, ",")
+	for i := len(entries) - 1; i >= 0; i-- {
+		if ip := validIP(entries[i]); ip != "" {
+			return ip
+		}
 	}
-	return strings.TrimSpace(value)
+	return ""
+}
+
+func validIP(value string) string {
+	addr, err := netip.ParseAddr(strings.TrimSpace(value))
+	if err != nil {
+		return ""
+	}
+	return addr.String()
 }
 
 func logPayload(v any, skipRedact bool) any {

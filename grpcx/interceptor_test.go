@@ -136,13 +136,50 @@ func TestLoggingSkipsGeneratedRedaction(t *testing.T) {
 	}
 }
 
-func TestClientIPUsesForwardedMetadata(t *testing.T) {
+func TestClientIPUsesRightmostValidForwardedFor(t *testing.T) {
+	// The leftmost x-forwarded-for entries are client-controlled (proxies
+	// append, clients can pre-fill); the rightmost valid IP is the closest
+	// verifiable hop.
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		"x-forwarded-for", "203.0.113.1, 10.0.0.1",
 	))
 
-	if got := ClientIP(ctx); got != "203.0.113.1" {
-		t.Fatalf("ClientIP(ctx) = %q, want 203.0.113.1", got)
+	if got := ClientIP(ctx); got != "10.0.0.1" {
+		t.Fatalf("ClientIP(ctx) = %q, want 10.0.0.1", got)
+	}
+}
+
+func TestClientIPPrefersOverwriteStyleHeaders(t *testing.T) {
+	// cf-connecting-ip / x-real-ip are single-value headers overwritten by a
+	// trusted edge; they beat the append-style x-forwarded-for.
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
+		"x-forwarded-for", "203.0.113.9, 10.0.0.1",
+		"cf-connecting-ip", "198.51.100.7",
+	))
+
+	if got := ClientIP(ctx); got != "198.51.100.7" {
+		t.Fatalf("ClientIP(ctx) = %q, want 198.51.100.7", got)
+	}
+}
+
+func TestClientIPSkipsInvalidForwardedValues(t *testing.T) {
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
+		"x-forwarded-for", "<script>alert(1)</script>, also-not-an-ip",
+		"x-real-ip", "not-an-ip",
+	))
+
+	if got := ClientIP(ctx); got != "" {
+		t.Fatalf("ClientIP(ctx) = %q, want empty for garbage headers without peer", got)
+	}
+}
+
+func TestClientIPParsesIPv6(t *testing.T) {
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
+		"x-forwarded-for", "2001:db8::1",
+	))
+
+	if got := ClientIP(ctx); got != "2001:db8::1" {
+		t.Fatalf("ClientIP(ctx) = %q, want 2001:db8::1", got)
 	}
 }
 
