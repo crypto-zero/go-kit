@@ -8,14 +8,11 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
 const defaultPingTimeout = 5 * time.Second
-
-// uniqueViolationCode is the PostgreSQL SQLSTATE for a unique constraint
-// violation.
-const uniqueViolationCode = "23505"
 
 // DBConfig describes a PostgreSQL connection pool. Driver is typically "pgx"
 // (register github.com/jackc/pgx/v5/stdlib via a blank import). A non-positive
@@ -79,7 +76,7 @@ func OpenDB(ctx context.Context, cfg DBConfig, logger *slog.Logger) (*sql.DB, fu
 // violation (SQLSTATE 23505), unwrapping through the error chain.
 func IsUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == uniqueViolationCode
+	return errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation
 }
 
 // rollbacker is satisfied by *sql.Tx; it is accepted as an interface so the

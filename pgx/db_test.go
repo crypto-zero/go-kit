@@ -6,6 +6,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -17,7 +18,7 @@ func TestOpenDBRejectsUnknownDriver(t *testing.T) {
 }
 
 func TestIsUniqueViolation(t *testing.T) {
-	if !IsUniqueViolation(&pgconn.PgError{Code: "23505"}) {
+	if !IsUniqueViolation(&pgconn.PgError{Code: pgerrcode.UniqueViolation}) {
 		t.Fatal("IsUniqueViolation(23505) = false, want true")
 	}
 	if IsUniqueViolation(&pgconn.PgError{Code: "23503"}) {
