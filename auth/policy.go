@@ -1,4 +1,4 @@
-// Package auth provides auth helpers for Kratos operation selectors.
+// Package auth provides generic operation auth policy helpers.
 package auth
 
 import (
@@ -8,7 +8,7 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 
-// OperationPolicy reports whether a Kratos operation should run through
+// OperationPolicy reports whether an operation should run through
 // authentication middleware.
 type OperationPolicy struct {
 	public map[string]struct{}
@@ -27,7 +27,7 @@ func NewOperationPolicy(opts ...OperationPolicyOption) *OperationPolicy {
 	return p
 }
 
-// WithPublicOperations marks explicit Kratos operations as public.
+// WithPublicOperations marks explicit operations as public.
 func WithPublicOperations(ops ...string) OperationPolicyOption {
 	return func(p *OperationPolicy) {
 		for _, op := range ops {
@@ -52,7 +52,7 @@ func (p *OperationPolicy) RequiresAuth(operation string) bool {
 	return !ok
 }
 
-// OperationName returns the Kratos operation string for a proto method.
+// OperationName returns the gRPC operation string for a proto method.
 func OperationName(m protoreflect.MethodDescriptor) string {
 	return "/" + string(m.Parent().FullName()) + "/" + string(m.Name())
 }

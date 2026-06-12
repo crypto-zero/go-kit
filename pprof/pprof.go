@@ -12,12 +12,6 @@ import (
 	"github.com/google/gops/agent"
 )
 
-// Pprof is a pprof service.
-//
-// Deprecated: This broad compatibility type is an alias-shaped service token.
-// Consumers should depend on the behavior they need instead of this type.
-type Pprof any
-
 // PprofImpl is a pprof service implementation.
 type PprofImpl struct {
 	listener net.Listener
@@ -26,9 +20,7 @@ type PprofImpl struct {
 
 // NewPProfImpl returns a new PprofImpl.
 // It provides gops agent and pprof service.
-//
-// It returns Pprof for backward compatibility with earlier releases.
-func NewPProfImpl() (Pprof, func(), error) {
+func NewPProfImpl() (*PprofImpl, func(), error) {
 	ln, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		return nil, func() {}, fmt.Errorf("start pprof failed: %w", err)

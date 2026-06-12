@@ -4,6 +4,7 @@ package kit.errors.v1;
 
 import "google/protobuf/any.proto";
 import "google/rpc/error_details.proto";
+import "google/rpc/status.proto";
 
 option go_package = "github.com/crypto-zero/go-kit/errors;errors";
 
@@ -12,4 +13,10 @@ message Error {
   string message = 2;
   google.rpc.ErrorInfo info = 3;
   repeated google.protobuf.Any details = 4;
+}
+
+// GrpcStatusDescriptorDependencies keeps google.rpc error types in descriptor
+// sets for proxies that render grpc-status-details-bin as JSON.
+message GrpcStatusDescriptorDependencies {
+  google.rpc.Status status = 1;
 }
