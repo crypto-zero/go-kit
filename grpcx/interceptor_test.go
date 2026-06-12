@@ -194,9 +194,9 @@ func TestLogPayloadUsesGeneratedRedactMethod(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new struct: %v", err)
 	}
-	raw, ok := logPayload(&generatedRedacter{Struct: payload}, false).(json.RawMessage)
+	raw, ok := logPayload(&generatedRedacter{Struct: payload}, loggingOptions{}).(json.RawMessage)
 	if !ok {
-		t.Fatalf("log payload type = %T, want json.RawMessage", logPayload(payload, false))
+		t.Fatalf("log payload type = %T, want json.RawMessage", logPayload(payload, loggingOptions{}))
 	}
 	body := string(raw)
 	for _, field := range []string{
@@ -220,9 +220,9 @@ func TestLogPayloadSkipsGeneratedRedactMethod(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new struct: %v", err)
 	}
-	raw, ok := logPayload(&generatedRedacter{Struct: payload}, true).(json.RawMessage)
+	raw, ok := logPayload(&generatedRedacter{Struct: payload}, loggingOptions{skipRedact: true}).(json.RawMessage)
 	if !ok {
-		t.Fatalf("log payload type = %T, want json.RawMessage", logPayload(payload, false))
+		t.Fatalf("log payload type = %T, want json.RawMessage", logPayload(payload, loggingOptions{}))
 	}
 	body := string(raw)
 	if !strings.Contains(body, `"secret":"plain-secret"`) {
@@ -240,16 +240,16 @@ func TestLogPayloadReturnsInvalidGeneratedRedactAsString(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new struct: %v", err)
 	}
-	got := logPayload(&invalidGeneratedRedacter{Struct: payload}, false)
+	got := logPayload(&invalidGeneratedRedacter{Struct: payload}, loggingOptions{})
 	if got != "masked" {
 		t.Fatalf("logPayload = %#v, want masked string", got)
 	}
 }
 
 func TestLogPayloadUsesProtoNamesWithoutUnpopulatedFields(t *testing.T) {
-	raw, ok := logPayload(&redactv1.RedactOptions{}, false).(json.RawMessage)
+	raw, ok := logPayload(&redactv1.RedactOptions{}, loggingOptions{}).(json.RawMessage)
 	if !ok {
-		t.Fatalf("log payload type = %T, want json.RawMessage", logPayload(&redactv1.RedactOptions{}, false))
+		t.Fatalf("log payload type = %T, want json.RawMessage", logPayload(&redactv1.RedactOptions{}, loggingOptions{}))
 	}
 	body := string(raw)
 	if body != "{}" {
@@ -258,9 +258,9 @@ func TestLogPayloadUsesProtoNamesWithoutUnpopulatedFields(t *testing.T) {
 
 	raw, ok = logPayload(&redactv1.RedactOptions{
 		MaskValue: &redactv1.RedactOptions_StringMask{StringMask: "[MASKED]"},
-	}, false).(json.RawMessage)
+	}, loggingOptions{}).(json.RawMessage)
 	if !ok {
-		t.Fatalf("log payload type = %T, want json.RawMessage", logPayload(&redactv1.RedactOptions{}, false))
+		t.Fatalf("log payload type = %T, want json.RawMessage", logPayload(&redactv1.RedactOptions{}, loggingOptions{}))
 	}
 	body = string(raw)
 	if !strings.Contains(body, `"string_mask":"[MASKED]"`) {

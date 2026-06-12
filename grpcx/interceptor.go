@@ -22,13 +22,21 @@ import (
 )
 
 const (
-	okCode = 200
+	codeOK = 200
 	// codeClientClosedRequest is the nginx-convention status for requests the
 	// client canceled; it keeps client cancellations below the 5xx alerting
 	// threshold.
 	codeClientClosedRequest = 499
 	codeGatewayTimeout      = 504
+	// serverErrorFloor is the first status code treated as a server fault and
+	// logged at Error level; everything below logs at Warn.
+	serverErrorFloor = 500
 )
+
+// overwriteIPHeaders are single-value client-IP headers that trusted edges
+// (Cloudflare, nginx, Envoy) overwrite rather than append to; they outrank
+// the append-style x-forwarded-for.
+var overwriteIPHeaders = []string{"cf-connecting-ip", "x-real-ip"}
 
 // LoggingOption configures gRPC server request logging.
 type LoggingOption func(*loggingOptions)
@@ -43,8 +51,8 @@ type redacter interface {
 	Redact() string
 }
 
-// WithLoggingComponent sets the logged component field.
-func WithLoggingComponent(component string) LoggingOption {
+// WithComponent sets the logged component field.
+func WithComponent(component string) LoggingOption {
 	return func(o *loggingOptions) {
 		o.component = component
 	}
@@ -76,10 +84,7 @@ func ErrorNormalization() grpc.UnaryServerInterceptor {
 		handler grpc.UnaryHandler,
 	) (any, error) {
 		resp, err := handler(ctx, req)
-		if err != nil {
-			return resp, normalizeError(err)
-		}
-		return resp, nil
+		return resp, normalizeError(err)
 	}
 }
 
@@ -93,15 +98,22 @@ func normalizeError(err error) error {
 	if err == nil {
 		return nil
 	}
-	e := kiterrors.FromError(err)
-	if e.Status != kiterrors.UnknownCode ||
-		(e.Info != nil && e.Info.Reason != kiterrors.UnknownReason) {
+	if !isUnknownError(kiterrors.FromError(err)) {
 		return err
 	}
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return status.FromContextError(err).Err()
 	}
 	return kiterrors.InternalServer("INTERNAL", "internal server error")
+}
+
+// isUnknownError reports whether e is kiterrors.FromError's unknown-error
+// fallback rather than a deliberate error. normalizeError and errorFields
+// must agree on this predicate: it decides both what the client receives and
+// how the request is logged.
+func isUnknownError(e *kiterrors.Error) bool {
+	return e.Status == kiterrors.UnknownCode &&
+		(e.Info == nil || e.Info.Reason == kiterrors.UnknownReason)
 }
 
 // Recovery returns a unary interceptor that converts panics into internal errors.
@@ -123,7 +135,10 @@ func Recovery(logger *slog.Logger) grpc.UnaryServerInterceptor {
 	}
 }
 
-// Logging returns a unary interceptor with kratos-compatible request fields.
+// Logging returns a unary interceptor that writes one structured record per
+// request with kratos-style fields: ip, device, kind, component, operation,
+// args, reply, code, reason, latency (seconds) and err on failure. Payloads
+// honor protoc-gen-go-redact unless WithSkipRedact is set.
 func Logging(logger *slog.Logger, opts ...LoggingOption) grpc.UnaryServerInterceptor {
 	logger = nonNilLogger(logger)
 	options := newLoggingOptions(opts...)
@@ -131,23 +146,23 @@ func Logging(logger *slog.Logger, opts ...LoggingOption) grpc.UnaryServerInterce
 		start := time.Now()
 		resp, err := handler(ctx, req)
 		latency := time.Since(start)
-		method := fullMethod(info)
+		operation := fullMethod(info)
 		code, reason := errorFields(err)
 		attrs := []any{
 			"ip", ClientIP(ctx),
 			"device", metadataValue(ctx, options.deviceKeys),
 			"kind", "server",
 			"component", options.component,
-			"operation", method,
-			"args", logPayload(req, options.skipRedact),
-			"reply", logPayload(resp, options.skipRedact),
+			"operation", operation,
+			"args", logPayload(req, options),
+			"reply", logPayload(resp, options),
 			"code", code,
 			"reason", reason,
 			"latency", latency.Seconds(),
 		}
 		if err != nil {
 			attrs = append(attrs, "err", err)
-			logErrorContext(logger, ctx, code, "grpc request failed", attrs...)
+			logRequestFailure(ctx, logger, code, "grpc request failed", attrs...)
 			return resp, err
 		}
 		logger.InfoContext(ctx, "grpc request completed", attrs...)
@@ -166,12 +181,12 @@ func Logging(logger *slog.Logger, opts ...LoggingOption) grpc.UnaryServerInterce
 // hop — is used. Values that do not parse as IP addresses are ignored.
 func ClientIP(ctx context.Context) string {
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
-		for _, key := range []string{"cf-connecting-ip", "x-real-ip"} {
+		for _, key := range overwriteIPHeaders {
 			values := md.Get(key)
 			if len(values) == 0 {
 				continue
 			}
-			if ip := validIP(values[0]); ip != "" {
+			if ip := canonicalIP(values[0]); ip != "" {
 				return ip
 			}
 		}
@@ -211,14 +226,12 @@ func fullMethod(info *grpc.UnaryServerInfo) string {
 
 func errorFields(err error) (code int, reason string) {
 	if err == nil {
-		return okCode, ""
+		return codeOK, ""
 	}
 	// Deliberate errors keep their own code even when they wrap a context
 	// error from an internal sub-call; only the unknown fallback inspects
 	// context termination, so client cancellations do not log as 500s.
-	e := kiterrors.FromError(err)
-	if e.Status == kiterrors.UnknownCode &&
-		(e.Info == nil || e.Info.Reason == kiterrors.UnknownReason) {
+	if isUnknownError(kiterrors.FromError(err)) {
 		if errors.Is(err, context.Canceled) {
 			return codeClientClosedRequest, "CANCELLED"
 		}
@@ -229,8 +242,10 @@ func errorFields(err error) (code int, reason string) {
 	return kiterrors.Code(err), kiterrors.Reason(err)
 }
 
-func logErrorContext(logger *slog.Logger, ctx context.Context, code int, msg string, attrs ...any) {
-	if code >= 500 {
+// logRequestFailure logs a failed request at Error level for server faults
+// and Warn level for everything else (client errors, cancellations).
+func logRequestFailure(ctx context.Context, logger *slog.Logger, code int, msg string, attrs ...any) {
+	if code >= serverErrorFloor {
 		logger.ErrorContext(ctx, msg, attrs...)
 		return
 	}
@@ -264,14 +279,16 @@ func metadataValue(ctx context.Context, keys []string) string {
 func rightmostValidIP(list string) string {
 	entries := strings.Split(list, ",")
 	for i := len(entries) - 1; i >= 0; i-- {
-		if ip := validIP(entries[i]); ip != "" {
+		if ip := canonicalIP(entries[i]); ip != "" {
 			return ip
 		}
 	}
 	return ""
 }
 
-func validIP(value string) string {
+// canonicalIP parses value and returns its canonical string form, or "" when
+// it is not an IP address.
+func canonicalIP(value string) string {
 	addr, err := netip.ParseAddr(strings.TrimSpace(value))
 	if err != nil {
 		return ""
@@ -279,11 +296,11 @@ func validIP(value string) string {
 	return addr.String()
 }
 
-func logPayload(v any, skipRedact bool) any {
+func logPayload(v any, o loggingOptions) any {
 	if v == nil {
 		return json.RawMessage("{}")
 	}
-	if r, ok := v.(redacter); ok && !skipRedact {
+	if r, ok := v.(redacter); ok && !o.skipRedact {
 		return redactedPayload(r.Redact())
 	}
 	pm, ok := v.(proto.Message)
