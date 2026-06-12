@@ -78,18 +78,22 @@ func ErrorNormalization() grpc.UnaryServerInterceptor {
 // normalizeError redacts kiterrors.FromError's unknown-error fallback — the
 // only path that puts a raw err.Error() (SQL detail, dial targets, RPC URLs
 // with API keys, etc.) into the client-visible message. Deliberate errors —
-// kit error sentinels and explicit gRPC status errors — pass through
-// untouched, and context terminations keep their canonical gRPC codes.
+// kit error sentinels and explicit gRPC status errors — always pass through,
+// even when they wrap a context error from an internal sub-call. Otherwise
+// context terminations keep their canonical gRPC codes.
 func normalizeError(err error) error {
+	if err == nil {
+		return nil
+	}
+	e := kiterrors.FromError(err)
+	if e.Status != kiterrors.UnknownCode ||
+		(e.Info != nil && e.Info.Reason != kiterrors.UnknownReason) {
+		return err
+	}
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return status.FromContextError(err).Err()
 	}
-	e := kiterrors.FromError(err)
-	if e.Status == kiterrors.UnknownCode &&
-		(e.Info == nil || e.Info.Reason == kiterrors.UnknownReason) {
-		return kiterrors.InternalServer("INTERNAL", "internal server error")
-	}
-	return err
+	return kiterrors.InternalServer("INTERNAL", "internal server error")
 }
 
 // Recovery returns a unary interceptor that converts panics into internal errors.

@@ -341,6 +341,24 @@ func TestNormalizeErrorRedactsUnknownErrors(t *testing.T) {
 	}
 }
 
+// TestNormalizeErrorPrefersDeliberateErrorOverWrappedContextError pins the
+// precedence: when a deliberate kit error wraps a context timeout from an
+// internal sub-call (RPC client timeout etc.), the deliberate error must
+// reach the client — the inbound request itself did not time out.
+func TestNormalizeErrorPrefersDeliberateErrorOverWrappedContextError(t *testing.T) {
+	sentinel := kiterrors.ServiceUnavailable("UPSTREAM_CHECK_FAILED", "upstream check failed")
+	err := fmt.Errorf("%w: %w", sentinel, context.DeadlineExceeded)
+
+	got := normalizeError(err)
+	if !errors.Is(got, sentinel) {
+		t.Fatalf("normalizeError(%v) = %v, want the deliberate sentinel preserved", err, got)
+	}
+	st, _ := status.FromError(got)
+	if st.Code() == codes.DeadlineExceeded {
+		t.Fatalf("normalizeError(%v) code = %v; wrapped sub-call timeout must not mask the deliberate error", err, st.Code())
+	}
+}
+
 func TestNormalizeErrorKeepsContextCodes(t *testing.T) {
 	cases := []struct {
 		name string
