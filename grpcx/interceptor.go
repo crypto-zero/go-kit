@@ -116,6 +116,57 @@ func isUnknownError(e *kiterrors.Error) bool {
 		(e.Info == nil || e.Info.Reason == kiterrors.UnknownReason)
 }
 
+// MessageValidator validates a proto message. A protovalidate Validator's
+// Validate method satisfies it after a trivial wrap:
+//
+//	grpcx.Validation(func(m proto.Message) error { return v.Validate(m) })
+//
+// Keeping the dependency at the call site lets grpcx stay free of the
+// protovalidate (CEL) import.
+type MessageValidator func(proto.Message) error
+
+// ValidationOption configures the Validation interceptor.
+type ValidationOption func(*validationOptions)
+
+type validationOptions struct {
+	errTemplate *kiterrors.Error
+}
+
+// WithValidationError sets the error returned on a validation failure. The
+// template is cloned per failure and its message is replaced with the
+// validator's detail, so a shared sentinel is never mutated. Defaults to a
+// 400 VALIDATION_FAILED error.
+func WithValidationError(err *kiterrors.Error) ValidationOption {
+	return func(o *validationOptions) {
+		if err != nil {
+			o.errTemplate = err
+		}
+	}
+}
+
+// Validation returns a unary interceptor that runs validate against every
+// incoming proto.Message request and rejects failures before the handler
+// runs. A nil validate skips validation. The validator's detail is carried in
+// the returned error's message.
+func Validation(validate MessageValidator, opts ...ValidationOption) grpc.UnaryServerInterceptor {
+	o := validationOptions{errTemplate: kiterrors.BadRequest("VALIDATION_FAILED", "validation failed")}
+	for _, opt := range opts {
+		opt(&o)
+	}
+	return func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		if validate != nil {
+			if msg, ok := req.(proto.Message); ok {
+				if err := validate(msg); err != nil {
+					rejected := o.errTemplate.Clone()
+					rejected.Message = err.Error()
+					return nil, rejected
+				}
+			}
+		}
+		return handler(ctx, req)
+	}
+}
+
 // Recovery returns a unary interceptor that converts panics into internal errors.
 func Recovery(logger *slog.Logger) grpc.UnaryServerInterceptor {
 	logger = nonNilLogger(logger)

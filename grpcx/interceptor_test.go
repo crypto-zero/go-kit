@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -504,5 +505,77 @@ func TestErrorNormalizationPassesResponsesThrough(t *testing.T) {
 	}
 	if got != want {
 		t.Fatalf("response = %v, want handler response", got)
+	}
+}
+
+func TestValidationRejectsInvalidMessage(t *testing.T) {
+	wantErr := errors.New("field x is required")
+	interceptor := Validation(func(proto.Message) error { return wantErr })
+
+	_, err := interceptor(context.Background(), &emptypb.Empty{}, &grpc.UnaryServerInfo{
+		FullMethod: "/test.Service/Method",
+	}, func(context.Context, any) (any, error) {
+		t.Fatal("handler ran despite validation failure")
+		return nil, nil
+	})
+	if err == nil {
+		t.Fatal("Validation passed an invalid message")
+	}
+	if kiterrors.Code(err) != 400 {
+		t.Fatalf("validation error code = %d, want 400", kiterrors.Code(err))
+	}
+	if !strings.Contains(err.Error(), "field x is required") {
+		t.Fatalf("validation error %q drops the validator detail", err.Error())
+	}
+}
+
+func TestValidationPassesValidMessage(t *testing.T) {
+	interceptor := Validation(func(proto.Message) error { return nil })
+	ran := false
+	_, err := interceptor(context.Background(), &emptypb.Empty{}, &grpc.UnaryServerInfo{
+		FullMethod: "/test.Service/Method",
+	}, func(context.Context, any) (any, error) {
+		ran = true
+		return &emptypb.Empty{}, nil
+	})
+	if err != nil {
+		t.Fatalf("Validation rejected a valid message: %v", err)
+	}
+	if !ran {
+		t.Fatal("handler did not run for a valid message")
+	}
+}
+
+func TestValidationNilValidatorSkips(t *testing.T) {
+	interceptor := Validation(nil)
+	ran := false
+	_, err := interceptor(context.Background(), &emptypb.Empty{}, &grpc.UnaryServerInfo{
+		FullMethod: "/test.Service/Method",
+	}, func(context.Context, any) (any, error) {
+		ran = true
+		return &emptypb.Empty{}, nil
+	})
+	if err != nil || !ran {
+		t.Fatalf("nil validator must skip validation: err=%v ran=%v", err, ran)
+	}
+}
+
+func TestValidationWithCustomError(t *testing.T) {
+	sentinel := kiterrors.New(422, "CUSTOM_VALIDATION", "custom validation failed")
+	interceptor := Validation(
+		func(proto.Message) error { return errors.New("bad input") },
+		WithValidationError(sentinel),
+	)
+	_, err := interceptor(context.Background(), &emptypb.Empty{}, &grpc.UnaryServerInfo{
+		FullMethod: "/test.Service/Method",
+	}, func(context.Context, any) (any, error) { return nil, nil })
+	if kiterrors.Reason(err) != "CUSTOM_VALIDATION" {
+		t.Fatalf("reason = %q, want CUSTOM_VALIDATION", kiterrors.Reason(err))
+	}
+	if !strings.Contains(err.Error(), "bad input") {
+		t.Fatalf("custom validation error %q drops the detail", err.Error())
+	}
+	if !errors.Is(sentinel, sentinel) || sentinel.Message != "custom validation failed" {
+		t.Fatalf("sentinel template mutated: %q", sentinel.Message)
 	}
 }
