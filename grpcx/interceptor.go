@@ -21,7 +21,14 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-const okCode = 200
+const (
+	okCode = 200
+	// codeClientClosedRequest is the nginx-convention status for requests the
+	// client canceled; it keeps client cancellations below the 5xx alerting
+	// threshold.
+	codeClientClosedRequest = 499
+	codeGatewayTimeout      = 504
+)
 
 // LoggingOption configures gRPC server request logging.
 type LoggingOption func(*loggingOptions)
@@ -132,7 +139,6 @@ func Logging(logger *slog.Logger, opts ...LoggingOption) grpc.UnaryServerInterce
 			"kind", "server",
 			"component", options.component,
 			"operation", method,
-			"method", method,
 			"args", logPayload(req, options.skipRedact),
 			"reply", logPayload(resp, options.skipRedact),
 			"code", code,
@@ -206,6 +212,19 @@ func fullMethod(info *grpc.UnaryServerInfo) string {
 func errorFields(err error) (code int, reason string) {
 	if err == nil {
 		return okCode, ""
+	}
+	// Deliberate errors keep their own code even when they wrap a context
+	// error from an internal sub-call; only the unknown fallback inspects
+	// context termination, so client cancellations do not log as 500s.
+	e := kiterrors.FromError(err)
+	if e.Status == kiterrors.UnknownCode &&
+		(e.Info == nil || e.Info.Reason == kiterrors.UnknownReason) {
+		if errors.Is(err, context.Canceled) {
+			return codeClientClosedRequest, "CANCELLED"
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			return codeGatewayTimeout, "DEADLINE_EXCEEDED"
+		}
 	}
 	return kiterrors.Code(err), kiterrors.Reason(err)
 }

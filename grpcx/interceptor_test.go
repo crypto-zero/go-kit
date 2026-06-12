@@ -90,6 +90,9 @@ func TestLoggingAddsKratosStyleFields(t *testing.T) {
 	}
 
 	body := out.String()
+	if strings.Contains(body, `"method":`) {
+		t.Fatalf("request log contains duplicate method field (operation already carries it): %s", body)
+	}
 	for _, field := range []string{
 		`"ip":"203.0.113.1"`,
 		`"device":"test-client"`,
@@ -291,6 +294,58 @@ func TestLoggingWarnsForClientError(t *testing.T) {
 		if !strings.Contains(body, field) {
 			t.Fatalf("client error log missing %s in %s", field, body)
 		}
+	}
+}
+
+func TestLoggingWarnsForClientCancellation(t *testing.T) {
+	var out bytes.Buffer
+	interceptor := Logging(slog.New(slog.NewJSONHandler(&out, nil)))
+	cancelErr := fmt.Errorf("stream points: %w", context.Canceled)
+
+	_, err := interceptor(context.Background(), &emptypb.Empty{}, &grpc.UnaryServerInfo{
+		FullMethod: "/test.Service/Method",
+	}, func(context.Context, any) (any, error) {
+		return nil, cancelErr
+	})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("error = %v, want wrapped context.Canceled", err)
+	}
+	body := out.String()
+	for _, field := range []string{
+		`"level":"WARN"`,
+		`"code":499`,
+		`"reason":"CANCELLED"`,
+	} {
+		if !strings.Contains(body, field) {
+			t.Fatalf("client cancellation log missing %s in %s", field, body)
+		}
+	}
+}
+
+func TestErrorFieldsMapsContextTermination(t *testing.T) {
+	sentinel := kiterrors.ServiceUnavailable("UPSTREAM_CHECK_FAILED", "upstream check failed")
+	cases := []struct {
+		name       string
+		err        error
+		wantCode   int
+		wantReason string
+	}{
+		{"canceled", fmt.Errorf("x: %w", context.Canceled), 499, "CANCELLED"},
+		{"deadline exceeded", fmt.Errorf("x: %w", context.DeadlineExceeded), 504, "DEADLINE_EXCEEDED"},
+		{
+			"deliberate error wrapping timeout keeps its own code",
+			fmt.Errorf("%w: %w", sentinel, context.DeadlineExceeded),
+			503, "UPSTREAM_CHECK_FAILED",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			code, reason := errorFields(tc.err)
+			if code != tc.wantCode || reason != tc.wantReason {
+				t.Fatalf("errorFields(%v) = (%d, %q), want (%d, %q)",
+					tc.err, code, reason, tc.wantCode, tc.wantReason)
+			}
+		})
 	}
 }
 
