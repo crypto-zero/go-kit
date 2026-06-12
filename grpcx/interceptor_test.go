@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"testing"
@@ -12,7 +13,9 @@ import (
 	kiterrors "github.com/crypto-zero/go-kit/errors"
 	redactv1 "github.com/crypto-zero/go-kit/proto/kit/redact/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -288,5 +291,108 @@ func TestLoggingReturnsHandlerError(t *testing.T) {
 	})
 	if !errors.Is(err, errUnexpectedHandlerCall) {
 		t.Fatalf("error = %v, want %v", err, errUnexpectedHandlerCall)
+	}
+}
+
+var errNotFoundSentinel = kiterrors.NotFound("RESOURCE_NOT_FOUND", "resource not found")
+
+func TestNormalizeErrorPassesDeliberateErrorsThrough(t *testing.T) {
+	cases := []struct {
+		name string
+		err  error
+	}{
+		{"kit error", errNotFoundSentinel},
+		{"wrapped kit error", fmt.Errorf("get resource: %w", errNotFoundSentinel)},
+		{"grpc status error", status.Error(codes.NotFound, "no such method")},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := normalizeError(tc.err); !errors.Is(got, tc.err) {
+				t.Fatalf("normalizeError(%v) = %v, want the original error preserved", tc.err, got)
+			}
+		})
+	}
+}
+
+func TestNormalizeErrorRedactsUnknownErrors(t *testing.T) {
+	const internalDetail = "dial tcp 10.0.0.1:5432: connection refused"
+	cases := []struct {
+		name string
+		err  error
+	}{
+		{"plain error", errors.New(internalDetail)},
+		{"wrapped plain error", fmt.Errorf("query backend: %w", errors.New(internalDetail))},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := normalizeError(tc.err)
+			st, _ := status.FromError(got)
+			if st.Code() != codes.Internal {
+				t.Fatalf("normalizeError(%v) code = %v, want %v", tc.err, st.Code(), codes.Internal)
+			}
+			if strings.Contains(st.Message(), "10.0.0.1") {
+				t.Fatalf("normalizeError leaked internal detail to client: %q", st.Message())
+			}
+			e := kiterrors.FromError(got)
+			if e.Info == nil || e.Info.Reason == kiterrors.UnknownReason {
+				t.Fatalf("normalized error has no deliberate reason: %+v", e)
+			}
+		})
+	}
+}
+
+func TestNormalizeErrorKeepsContextCodes(t *testing.T) {
+	cases := []struct {
+		name string
+		err  error
+		want codes.Code
+	}{
+		{"canceled", fmt.Errorf("await session: %w", context.Canceled), codes.Canceled},
+		{"deadline exceeded", fmt.Errorf("query: %w", context.DeadlineExceeded), codes.DeadlineExceeded},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			st, _ := status.FromError(normalizeError(tc.err))
+			if st.Code() != tc.want {
+				t.Fatalf("normalizeError(%v) code = %v, want %v", tc.err, st.Code(), tc.want)
+			}
+		})
+	}
+}
+
+func TestErrorNormalizationSanitizesHandlerErrors(t *testing.T) {
+	interceptor := ErrorNormalization()
+	handler := func(context.Context, any) (any, error) {
+		cause := errors.New(`pq: password authentication failed for user "postgres"`)
+		return nil, fmt.Errorf("query resources: %w", cause)
+	}
+	_, err := interceptor(context.Background(), &emptypb.Empty{}, &grpc.UnaryServerInfo{
+		FullMethod: "/test.Service/Method",
+	}, handler)
+	if err == nil {
+		t.Fatal("interceptor returned nil error, want sanitized internal error")
+	}
+	st, _ := status.FromError(err)
+	if st.Code() != codes.Internal {
+		t.Fatalf("code = %v, want %v", st.Code(), codes.Internal)
+	}
+	if strings.Contains(st.Message(), "postgres") {
+		t.Fatalf("interceptor leaked internal detail: %q", st.Message())
+	}
+}
+
+func TestErrorNormalizationPassesResponsesThrough(t *testing.T) {
+	interceptor := ErrorNormalization()
+	want := &emptypb.Empty{}
+	got, err := interceptor(context.Background(), &emptypb.Empty{}, &grpc.UnaryServerInfo{
+		FullMethod: "/test.Service/Method",
+	}, func(context.Context, any) (any, error) {
+		return want, nil
+	})
+	if err != nil {
+		t.Fatalf("error = %v, want nil", err)
+	}
+	if got != want {
+		t.Fatalf("response = %v, want handler response", got)
 	}
 }

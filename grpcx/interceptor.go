@@ -4,6 +4,7 @@ package grpcx
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net"
 	"runtime/debug"
@@ -14,6 +15,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
@@ -52,6 +54,42 @@ func WithSkipRedact() LoggingOption {
 	return func(o *loggingOptions) {
 		o.skipRedact = true
 	}
+}
+
+// ErrorNormalization returns a unary interceptor that rewrites handler errors
+// just before they leave the server. It should be the outermost interceptor,
+// wrapping Logging, so server logs keep the original wrap chain while the
+// client receives the sanitized form.
+func ErrorNormalization() grpc.UnaryServerInterceptor {
+	return func(
+		ctx context.Context,
+		req any,
+		_ *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (any, error) {
+		resp, err := handler(ctx, req)
+		if err != nil {
+			return resp, normalizeError(err)
+		}
+		return resp, nil
+	}
+}
+
+// normalizeError redacts kiterrors.FromError's unknown-error fallback — the
+// only path that puts a raw err.Error() (SQL detail, dial targets, RPC URLs
+// with API keys, etc.) into the client-visible message. Deliberate errors —
+// kit error sentinels and explicit gRPC status errors — pass through
+// untouched, and context terminations keep their canonical gRPC codes.
+func normalizeError(err error) error {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return status.FromContextError(err).Err()
+	}
+	e := kiterrors.FromError(err)
+	if e.Status == kiterrors.UnknownCode &&
+		(e.Info == nil || e.Info.Reason == kiterrors.UnknownReason) {
+		return kiterrors.InternalServer("INTERNAL", "internal server error")
+	}
+	return err
 }
 
 // Recovery returns a unary interceptor that converts panics into internal errors.
