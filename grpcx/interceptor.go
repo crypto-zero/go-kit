@@ -133,7 +133,6 @@ func Logging(logger *slog.Logger, opts ...LoggingOption) grpc.UnaryServerInterce
 			"code", code,
 			"reason", reason,
 			"latency", latency.Seconds(),
-			"duration", latency,
 		}
 		if err != nil {
 			attrs = append(attrs, "err", err)
